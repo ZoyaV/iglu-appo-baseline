@@ -1,6 +1,6 @@
 container:
   image: "treechop-appo-baseline:latest"
-  command: 'python main.py --config_path treechop_baseline.yaml'
+  command: 'xvfb-run -a python main.py'
   tty: True
   environment:
     - "WANDB_API_KEY=<YOUR API KEY>"

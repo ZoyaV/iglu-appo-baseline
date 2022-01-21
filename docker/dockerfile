@@ -1,6 +1,9 @@
 FROM pytorch/pytorch
 RUN apt update && apt install build-essential ffmpeg libsm6 libxext6 git -y
 
+RUN apt-get update && apt-get install software-properties-common -y
+RUN add-apt-repository -y ppa:openjdk-r/ppa && apt-get update && apt-get install -y openjdk-8-jdk && apt-get install -y xvfb
+
 RUN apt-get update && apt-get install -y \
   ffmpeg \
   libgl1-mesa-dev \
