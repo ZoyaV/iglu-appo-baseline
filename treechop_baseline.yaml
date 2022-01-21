@@ -1,7 +1,7 @@
 name: treechop-appo-baseline
 
 global_settings:
-  use_wandb: False
+  use_wandb: True
 
 experiment_settings:
   save_every_sec: 120
