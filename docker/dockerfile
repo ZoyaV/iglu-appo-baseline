@@ -1,0 +1,16 @@
+FROM pytorch/pytorch
+RUN apt update && apt install build-essential ffmpeg libsm6 libxext6 git -y
+
+RUN apt-get update && apt-get install -y \
+  ffmpeg \
+  libgl1-mesa-dev \
+  python3-pip \
+  unrar \
+  wget \
+  && apt-get clean
+
+# fixing ruamel.yaml 
+RUN conda install ruamel.yaml -y
+
+ADD requirements.txt /tmp/
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
