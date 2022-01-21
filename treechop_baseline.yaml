@@ -1,4 +1,4 @@
-name: crafter-appo-baseline
+name: treechop-appo-baseline
 
 global_settings:
   use_wandb: False
