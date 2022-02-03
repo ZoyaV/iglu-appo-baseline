@@ -2,6 +2,7 @@ import gym
 from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrapper
 from sample_factory.envs.env_wrappers import PixelFormatChwWrapper
 import minerl
+from RayEnvWrapper import WrapperRayVecEnv
 
 class DiscreteBase(gym.Wrapper):
     def __init__(self, env):
@@ -54,12 +55,21 @@ class MinerlOnlyObs(gym.ObservationWrapper):
         return observation['pov']
 
 
-def make_treechop():
+def make_treechop(*args, **kwargs):
+    import minerl
     env = gym.make('MineRLTreechop-v0')
     env = DiscreteWrapper(env)
     env = MinerlOnlyObs(env)
     env = PixelFormatChwWrapper(env)
 
-    env = MultiAgentWrapper(env)
+    #env = MultiAgentWrapper(env)
 
     return env
+
+
+def make_ray_treechop(num_workers=1, envs_per_worker=1):
+    vec_env = WrapperRayVecEnv(make_treechop, num_workers, envs_per_worker)
+    vec_env.reward_range = (-float('inf'), float('inf'))
+    vec_env.num_agents = num_workers * envs_per_worker
+    vec_env.is_multiagent = True
+    return vec_env

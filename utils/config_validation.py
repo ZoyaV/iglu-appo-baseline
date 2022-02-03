@@ -106,17 +106,18 @@ class GlobalSettings(BaseModel, extra=Extra.forbid):
     env: str = None
     experiment: str = 'TreeChopBaseline'
     experiments_root: str = None
-    train_dir: str = 'train_dir/experiment'
+    train_dir: str = None
     device: str = 'gpu'
     seed: int = None
     cli_args: dict = {}
     use_wandb: bool = True
 
-    @validator('experiments_root', always=True)
+    @validator('train_dir', always=True)
     def exp_root(cls, v):
         if v is None:
+            print('setting exp_root to current time')
             from datetime import datetime
-            return str(datetime.now())
+            return 'train_dir/' + str(datetime.now())
 
 
 class Evaluation(BaseModel, extra=Extra.forbid):

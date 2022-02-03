@@ -5,10 +5,10 @@ global_settings:
 
 experiment_settings:
   save_every_sec: 120
-  train_for_env_steps: 1000000
+  train_for_env_steps: 100000000
 
 async_ppo:
-
+  decorrelate_experience_max_seconds: 10
   experiment_summaries_interval: 5
   ppo_epochs: 1
   batch_size: 1024
@@ -18,11 +18,11 @@ async_ppo:
 
   worker_num_splits: 1
   num_workers:
-    grid_search: [1, 2, 3, 4, 5]
+    grid_search: [10]
   force_envs_single_thread:
-    grid_search: [True, False]
+    grid_search: [False]
   num_envs_per_worker:
-    grid_search: [1, 2]
+    grid_search: [1]
 
 environment:
   name: "MineRLTreechop-v0"

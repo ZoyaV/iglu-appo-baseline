@@ -20,7 +20,6 @@ def start_training_runs(config_path):
             spec['global_settings']['experiments_root'] = joined_vars
         # validate config
         Experiment(**spec)
-
         cmd = f"python3 training_run.py --wandb_thread_mode=True --raw_config='{json.dumps(spec)}'"
 
         env_vars = os.environ.copy()
