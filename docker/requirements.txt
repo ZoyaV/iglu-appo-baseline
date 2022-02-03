@@ -5,3 +5,4 @@ wandb>=0.12.0
 sample-factory==1.121.3
 chunkedfile>=0.3.0
 minerl>=0.4.2.1
+RayEnvWrapper
