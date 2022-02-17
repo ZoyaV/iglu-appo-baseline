@@ -25,4 +25,4 @@ async_ppo:
     grid_search: [1]
 
 environment:
-  name: "MineRLTreechop-v0"
+  name: 'IGLUSilentBuilder-v0'

@@ -3,6 +3,11 @@ from sample_factory.algorithms.utils.multi_agent_wrapper import MultiAgentWrappe
 from sample_factory.envs.env_wrappers import PixelFormatChwWrapper
 import minerl
 from RayEnvWrapper import WrapperRayVecEnv
+import gym
+import iglu
+import sys
+import wandb
+from iglu.tasks import RandomTasks, TaskSet
 
 class DiscreteBase(gym.Wrapper):
     def __init__(self, env):
@@ -56,8 +61,8 @@ class MinerlOnlyObs(gym.ObservationWrapper):
 
 
 def make_treechop(*args, **kwargs):
-    import minerl
-    env = gym.make('MineRLTreechop-v0')
+    import iglu
+    env = gym.make('IGLUSilentBuilder-v0', max_steps=5000)
     env = DiscreteWrapper(env)
     env = MinerlOnlyObs(env)
     env = PixelFormatChwWrapper(env)

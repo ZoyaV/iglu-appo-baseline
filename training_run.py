@@ -22,7 +22,7 @@ def make_env(full_env_name, cfg=None, env_config=None):
 
 def register_custom_components():
     global_env_registry().register_env(
-        env_name_prefix='MineRLTreechop-v0',
+        env_name_prefix='IGLUSilentBuilder-v0',
         make_env_func=make_env,
     )
 
