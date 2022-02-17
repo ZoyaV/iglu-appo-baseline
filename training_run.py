@@ -54,7 +54,7 @@ def main():
     parser.add_argument('--wandb_thread_mode', type=bool, action='store', default=False,
                         help='Run wandb in thread mode. Usefull for some setups.', required=False)
 
-    parser.add_argument('--with_wandb', action='store_true', default=True)
+   # parser.add_argument('--with_wandb', action='store_true', default=True)
 
     params = parser.parse_args()
 
