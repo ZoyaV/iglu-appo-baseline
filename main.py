@@ -41,7 +41,6 @@ def main():
     parser.add_argument('--config_path', type=str, action="store",
                         help='path to yaml file with single run configuration', required=False,
                         default='treechop_baseline.yaml')
-    parser.add_argument('--with_wandb', action='store_true', default=True)
 
     params = parser.parse_args()
     start_training_runs(params.config_path)
