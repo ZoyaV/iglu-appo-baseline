@@ -104,7 +104,7 @@ class ExperimentSettings(BaseModel, extra=Extra.forbid):
 class GlobalSettings(BaseModel, extra=Extra.forbid):
     algo: str = 'APPO'
     env: str = None
-    experiment: str = 'TreeChopBaseline'
+    experiment: str = 'TreeChopBaseline-iglu'
     experiments_root: str = None
     train_dir: str = None
     device: str = 'gpu'
@@ -131,7 +131,7 @@ class Evaluation(BaseModel, extra=Extra.forbid):
 
 
 class Environment(BaseModel, ):
-    name: str = "MineRLTreechop-v0"
+    name: str = 'IGLUSilentBuilder-v0'
 
 
 class Experiment(BaseModel):
