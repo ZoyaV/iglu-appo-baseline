@@ -72,6 +72,7 @@ def main():
         import os
         if params.wandb_thread_mode:
             os.environ["WANDB_START_METHOD"] = "thread"
+        wandb.login(key=os.environ.get('WANDB_APIKEY'))
         wandb.init(project=exp.name, config=exp.dict(), save_code=False, sync_tensorboard=True)
 
     status = run_algorithm(flat_config)
