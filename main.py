@@ -8,7 +8,7 @@ from utils.config_validation import Experiment
 from utils.gs2dict import generate_variants
 import yaml
 
-
+os.environ['WANDB_APIKEY'] = "e5ac79d62944a4e1910f83da82ae92c37b09ecdf"
 def start_training_runs(config_path):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
