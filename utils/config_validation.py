@@ -110,6 +110,7 @@ class GlobalSettings(BaseModel, extra=Extra.forbid):
     device: str = 'gpu'
     seed: int = None
     cli_args: dict = {}
+    use_wandb: bool = True
     with_wandb: bool = True
 
     @validator('train_dir', always=True)
