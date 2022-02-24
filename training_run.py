@@ -10,7 +10,8 @@ import wandb
 from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 import sys
-
+from sample_factory.algorithms.appo.model_utils import register_custom_encoder
+from model_with_target import LargePovBaselineModelTarget
 from create_env import make_iglu, make_ray_iglu
 from utils.config_validation import Experiment
 
@@ -25,6 +26,7 @@ def register_custom_components():
         env_name_prefix='IGLUSilentBuilder-v0',
         make_env_func=make_env,
     )
+    register_custom_encoder('custom_env_encoder', LargePovBaselineModelTarget)
 
 
 def validate_config(config):
