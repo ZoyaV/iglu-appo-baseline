@@ -11,12 +11,12 @@ from sample_factory.envs.env_registry import global_env_registry
 from sample_factory.run_algorithm import run_algorithm
 import sys
 
-from create_env import make_treechop, make_ray_treechop
+from create_env import make_iglu, make_ray_iglu
 from utils.config_validation import Experiment
 
 
 def make_env(full_env_name, cfg=None, env_config=None):
-    return make_ray_treechop()
+    return make_ray_iglu()
     #return make_treechop()
 
 
