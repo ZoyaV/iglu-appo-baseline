@@ -85,8 +85,8 @@ class ExperimentSettings(BaseModel, extra=Extra.forbid):
     reward_scale: float = 1.0
     reward_clip: float = 10.0
 
-    encoder_type: str = 'resnet'
-    encoder_custom: str = None
+    encoder_type: str = None
+    encoder_custom: str = 'custom_env_encoder'
     encoder_subtype: str = 'resnet_impala'
     encoder_extra_fc_layers: int = 1
 

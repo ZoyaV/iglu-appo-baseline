@@ -9,23 +9,52 @@ from ray.rllib.utils.framework import try_import_torch
 from ray.rllib.utils.typing import ModelConfigDict
 from ray.rllib.utils.annotations import override
 
-from sample_factory.algorithms.appo.model_utils import register_custom_encoder, EncoderBase, nonlinearity,get_obs_shape,ResBlock
+from sample_factory.algorithms.appo.model_utils import register_custom_encoder, EncoderBase, nonlinearity, get_obs_shape
 from sample_factory.algorithms.utils.pytorch_utils import calc_num_elements
 
 from torch import nn
 from ray.rllib.models.preprocessors import DictFlatteningPreprocessor, get_preprocessor
 
 torch, nn = try_import_torch()
+import logging
 
 CUDA_LAUNCH_BLOCKING = 1
+
+
+class ResBlock(nn.Module):
+    def __init__(self, cfg, input_ch, output_ch, timing):
+        super().__init__()
+
+        self.timing = timing
+
+        layers = [
+            nonlinearity(cfg),
+            nn.Conv2d(input_ch, output_ch, kernel_size=3, stride=1, padding=1),  # padding SAME
+            nonlinearity(cfg),
+            nn.Conv2d(output_ch, output_ch, kernel_size=3, stride=1, padding=1),  # padding SAME
+        ]
+
+        self.res_block_core = nn.Sequential(*layers)
+
+    def forward(self, x):
+        with self.timing.add_time('res_block'):
+            identity = x
+            out = self.res_block_core(x)
+            with self.timing.add_time('res_block_plus'):
+                out = out + identity
+            return out
 
 
 class ResnetEncoderWithTarget(EncoderBase):
     def __init__(self, cfg, obs_space, timing):
         super().__init__(cfg, timing)
+        # raise Exception(obs_space)
+        obs_shape = get_obs_shape(obs_space['pov'])
 
-        obs_shape = get_obs_shape(obs_space)
+        # obs_shape = get_obs_shape(obs_space)
+        # raise Exception(obs_space)
         input_ch = obs_shape.obs[0]
+        # log.debug('Num input channels: %d', input_ch)
 
         if cfg.encoder_subtype == 'resnet_impala':
             # configuration from the IMPALA paper
@@ -34,22 +63,6 @@ class ResnetEncoderWithTarget(EncoderBase):
             raise NotImplementedError(f'Unknown resnet subtype {cfg.encoder_subtype}')
 
         curr_input_channels = input_ch
-
-        inv_emded_size = 32
-        target_emded_size = 32
-        embed_size = 64
-        self.inventory_compass_emb = nn.Sequential(
-            nn.Linear(7, inv_emded_size),
-            nn.ReLU(),
-            nn.Linear(inv_emded_size, inv_emded_size),
-            nn.ReLU(),
-        )
-        self.target_grid_emb = nn.Sequential(
-            nn.Linear(9 * 11 * 11, target_emded_size),
-            nn.ReLU(),
-            nn.Linear(target_emded_size, target_emded_size),
-            nn.ReLU(),
-        )
         layers = []
         for i, (out_channels, res_blocks) in enumerate(resnet_conf):
             layers.extend([
@@ -64,18 +77,42 @@ class ResnetEncoderWithTarget(EncoderBase):
 
         layers.append(nonlinearity(cfg))
 
+        inv_emded_size = 32
+        target_emded_size = 32
+
+        self.inventory_compass_emb = nn.Sequential(
+            nn.Linear(7, inv_emded_size),
+            nn.ReLU(),
+            nn.Linear(inv_emded_size, inv_emded_size),
+            nn.ReLU(),
+        )
+        self.target_grid_emb = nn.Sequential(
+            nn.Linear(9 * 11 * 11, target_emded_size),
+            nn.ReLU(),
+            nn.Linear(target_emded_size, target_emded_size),
+            nn.ReLU(),
+        )
+
         self.conv_head = nn.Sequential(*layers)
         self.conv_head_out_size = calc_num_elements(self.conv_head, obs_shape.obs)
-        self.init_fc_blocks(self.conv_head_out_size)
+        #  log.debug('Convolutional layer output size: %r', self.conv_head_out_size)
+
+        self.init_fc_blocks(self.conv_head_out_size + inv_emded_size + target_emded_size)
+
+    #   self.init_fc_blocks(self.conv_head_out_size)
 
     def forward(self, obs_dict):
-        x = self.conv_head(obs_dict['obs'])
+
+        obs = obs_dict['obs']
+        #   raise Exception(obs)
+        #         x = self.conv_head(obs['pov'])
+        x = self.conv_head(obs['pov'])
         x = x.contiguous().view(-1, self.conv_head_out_size)
 
-        inventory_compass = torch.cat([obs_dict['inventory'], obs_dict['compass']], -1)
+        inventory_compass = torch.cat([obs['inventory'], obs['compass']], -1)
         inv_comp_emb = self.inventory_compass_emb(inventory_compass)
 
-        tg = obs_dict['target_grid']
+        tg = obs['target_grid']
         tg = tg.reshape(tg.shape[0], -1)
         tg_embed = self.target_grid_emb(tg)
 
@@ -83,7 +120,6 @@ class ResnetEncoderWithTarget(EncoderBase):
 
         x = self.forward_fc_blocks(head_input)
         return x
-
 
 
 class PovBaselineModelTarget(TorchModelV2, nn.Module):
@@ -136,7 +172,6 @@ class PovBaselineModelTarget(TorchModelV2, nn.Module):
 
         inventory_compass = torch.cat([obs['inventory'], obs['compass']], -1)
         inv_comp_emb = self.inventory_compass_emb(inventory_compass)
-
 
         tg = obs['target_grid']
         tg = tg.reshape(tg.shape[0], -1)
