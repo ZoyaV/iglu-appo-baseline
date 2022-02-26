@@ -1,3 +1,4 @@
+ BASE OF PRJECT: 
 # SampleFactory APPO baseline for MineRL Treechop environment (currently works poorly, the main idea is to test MineRL FPS)
 
 
