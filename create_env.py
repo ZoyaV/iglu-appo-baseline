@@ -23,6 +23,7 @@ from wrappers import \
     Closeness, \
     SweeperReward, \
     RandomTarget, \
+    VideoLogger, \
     Logger
 from custom_tasks import make_3d_cube, make_plane
 import numpy as np
@@ -132,23 +133,24 @@ def make_iglu(*args, **kwargs):
     # env = PovToObs(env)
 
     env = VisualObservationWrapper(env, True)
-    env = Discretization(make_iglu(), flat_action_space('human-level'))
+
     env = CompleteReward(env)
     env = TimeLimit(env, limit=500)
     env = Closeness(env)
-    env = SweeperReward(env)
+    env = CompleteScold(env)
+    # env = SweeperReward(env)
 
     env = PixelFormatChwWrapper(env)
-    # env = RandomTarget(env)
+    env = Discretization(env, flat_action_space('human-level'))
+    env = RandomTarget(env)
+    env = PovToObs(env)
 
-    # env = DiscreteWrapper(env)
+    num_workers, envs_per_worker = 6, 1
+    env.reward_range = (-float('inf'), float('inf'))
+    env.num_agents = num_workers * envs_per_worker
+    env.is_multiagent = False
 
-    #     env.reward_range = (-float('inf'), float('inf'))
-
-    #     num_workers, envs_per_worker =1,1
-    #     env.num_agents = num_workers * envs_per_worker
-    #     env.is_multiagent = True
-    # env = ObsToOneDict(env)
+    #  env = VideoLogger(env)
 
     return env
 

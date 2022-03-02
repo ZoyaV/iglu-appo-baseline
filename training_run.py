@@ -17,7 +17,7 @@ from utils.config_validation import Experiment
 
 
 def make_env(full_env_name, cfg=None, env_config=None):
-    return make_ray_iglu()
+    return make_iglu()
     #return make_treechop()
 
 
