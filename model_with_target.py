@@ -21,7 +21,6 @@ import logging
 CUDA_LAUNCH_BLOCKING = 1
 
 
-
 class ResBlock(nn.Module):
     def __init__(self, cfg, input_ch, output_ch, timing):
         super().__init__()
@@ -51,35 +50,42 @@ class ResnetEncoderWithTarget(EncoderBase):
         super().__init__(cfg, timing)
         # raise Exception(obs_space)
         obs_shape = get_obs_shape(obs_space['obs'])
-
-        # obs_shape = get_obs_shape(obs_space)
-        # raise Exception(obs_space)
         input_ch = obs_shape.obs[0]
-        # log.debug('Num input channels: %d', input_ch)
 
-        if cfg.encoder_subtype == 'resnet_impala':
-            # configuration from the IMPALA paper
-            resnet_conf = [[16, 2], [32, 2], [32, 2]]
-        else:
-            raise NotImplementedError(f'Unknown resnet subtype {cfg.encoder_subtype}')
+        target_shape = get_obs_shape(obs_space['target_grid'])
+        input_ch_targ = target_shape.obs[0]
+
+        inv_emded_size = 32
+        resnet_conf = [[16, 2], [32, 2], [32, 2]]
+        target_conf = [[16, 2], [16, 2]]
+
 
         curr_input_channels = input_ch
         layers = []
+        layers_target = []
+
+        ### OBS embedding
         for i, (out_channels, res_blocks) in enumerate(resnet_conf):
             layers.extend([
                 nn.Conv2d(curr_input_channels, out_channels, kernel_size=3, stride=1, padding=1),  # padding SAME
                 nn.MaxPool2d(kernel_size=3, stride=2, padding=1),  # padding SAME
             ])
-
             for j in range(res_blocks):
                 layers.append(ResBlock(cfg, out_channels, out_channels, self.timing))
-
             curr_input_channels = out_channels
-
         layers.append(nonlinearity(cfg))
+        self.conv_head = nn.Sequential(*layers)
 
-        inv_emded_size = 32
-        target_emded_size = 32
+        ### Target embedding
+        for i, (out_channels, res_blocks) in enumerate(target_conf):
+            layers_target.extend([
+                nn.Conv2d(input_ch_targ, out_channels, kernel_size=3, stride=1, padding=1),  # padding SAME
+            ])
+            for j in range(res_blocks):
+                layers_target.append(ResBlock(cfg, out_channels, out_channels, self.timing))
+            input_ch_targ = out_channels
+        layers_target.append(nonlinearity(cfg))
+        self.conv_target = nn.Sequential(*layers_target)
 
         self.inventory_compass_emb = nn.Sequential(
             nn.Linear(7, inv_emded_size),
@@ -87,40 +93,30 @@ class ResnetEncoderWithTarget(EncoderBase):
             nn.Linear(inv_emded_size, inv_emded_size),
             nn.ReLU(),
         )
-        self.target_grid_emb = nn.Sequential(
-            nn.Linear(9 * 11 * 11, target_emded_size),
-            nn.ReLU(),
-            nn.Linear(target_emded_size, target_emded_size),
-            nn.ReLU(),
-        )
 
-        self.conv_head = nn.Sequential(*layers)
         self.conv_head_out_size = calc_num_elements(self.conv_head, obs_shape.obs)
-        #  log.debug('Convolutional layer output size: %r', self.conv_head_out_size)
-
-        self.init_fc_blocks(self.conv_head_out_size + inv_emded_size + target_emded_size)
+        self.conv_target_out_size = calc_num_elements(self.conv_target_out_size, target_shape.obs)
+        self.init_fc_blocks(self.conv_head_out_size + self.conv_target_out_size+ inv_emded_size)
 
     #   self.init_fc_blocks(self.conv_head_out_size)
 
     def forward(self, obs_dict):
 
-        obs = obs_dict['obs']
-        #raise Exception(obs_dict)
-        #         x = self.conv_head(obs['pov'])
+
         x = self.conv_head(obs_dict['obs'])
         x = x.contiguous().view(-1, self.conv_head_out_size)
 
-        inventory_compass = torch.cat([obs_dict['inventory'], obs_dict['compass']], -1)
+        inventory_compass = torch.cat([obs_dict['inventory']/20, (obs_dict['compass']+180)/360], -1)
         inv_comp_emb = self.inventory_compass_emb(inventory_compass)
 
-        tg = obs_dict['target_grid']
-        tg = tg.reshape(tg.shape[0], -1)
-        tg_embed = self.target_grid_emb(tg)
+        tg = self.conv_target(obs_dict['target_grid']/6)
+        tg_embed = tg.contiguous().view(-1, self.conv_target_out_size)
 
         head_input = torch.cat([x, inv_comp_emb, tg_embed], -1)
 
         x = self.forward_fc_blocks(head_input)
         return x
+
 
 class PovBaselineModelTarget(TorchModelV2, nn.Module):
     def __init__(self, obs_space, action_space, num_outputs, model_config,
