@@ -21,6 +21,7 @@ import logging
 CUDA_LAUNCH_BLOCKING = 1
 
 
+
 class ResBlock(nn.Module):
     def __init__(self, cfg, input_ch, output_ch, timing):
         super().__init__()
@@ -49,7 +50,7 @@ class ResnetEncoderWithTarget(EncoderBase):
     def __init__(self, cfg, obs_space, timing):
         super().__init__(cfg, timing)
         # raise Exception(obs_space)
-        obs_shape = get_obs_shape(obs_space['pov'])
+        obs_shape = get_obs_shape(obs_space['obs'])
 
         # obs_shape = get_obs_shape(obs_space)
         # raise Exception(obs_space)
@@ -104,15 +105,15 @@ class ResnetEncoderWithTarget(EncoderBase):
     def forward(self, obs_dict):
 
         obs = obs_dict['obs']
-        #   raise Exception(obs)
+        #raise Exception(obs_dict)
         #         x = self.conv_head(obs['pov'])
-        x = self.conv_head(obs['pov'])
+        x = self.conv_head(obs_dict['obs'])
         x = x.contiguous().view(-1, self.conv_head_out_size)
 
-        inventory_compass = torch.cat([obs['inventory'], obs['compass']], -1)
+        inventory_compass = torch.cat([obs_dict['inventory'], obs_dict['compass']], -1)
         inv_comp_emb = self.inventory_compass_emb(inventory_compass)
 
-        tg = obs['target_grid']
+        tg = obs_dict['target_grid']
         tg = tg.reshape(tg.shape[0], -1)
         tg_embed = self.target_grid_emb(tg)
 
@@ -120,7 +121,6 @@ class ResnetEncoderWithTarget(EncoderBase):
 
         x = self.forward_fc_blocks(head_input)
         return x
-
 
 class PovBaselineModelTarget(TorchModelV2, nn.Module):
     def __init__(self, obs_space, action_space, num_outputs, model_config,
