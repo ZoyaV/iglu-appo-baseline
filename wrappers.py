@@ -14,8 +14,9 @@ from collections import defaultdict
 from typing import Generator
 from minerl_patched.herobraine.hero import spaces
 from custom_tasks import make_3d_cube, make_plane
+import matplotlib.pyplot as plt
+import cv2
 from iglu.tasks import RandomTasks
-
 
 logger = logging.getLogger(__file__)
 IGLU_ENABLE_LOG = os.environ.get('IGLU_ENABLE_LOG', '')
@@ -73,7 +74,7 @@ class ObsWrapper(Wrapper):
 
     def step(self, action):
         obs, reward, done, info = super().step(action)
-      #  print(done)
+        #  print(done)
         info['grid'] = obs['grid']
         info['agentPos'] = obs['agentPos']
         return self.observation(obs, reward, done, info), reward, done, info
@@ -96,6 +97,7 @@ class TimeLimit(Wrapper):
             done = True
         return obs, reward, done, info
 
+
 class SweeperReward(Wrapper):
     def __init__(self, env):
         super().__init__(env)
@@ -110,15 +112,15 @@ class SweeperReward(Wrapper):
 
     def garbage(self, info):
         roi = info['grid'][info['target_grid'] == 0]
-        return len((np.where(roi!=0)[0]))
+        return len((np.where(roi != 0)[0]))
 
     def calc_reward(self, info):
         garbage = self.garbage(info)
         if garbage > self.last_step_garbage:
-            #self.last_step_garbage_max = garbage
+            # self.last_step_garbage_max = garbage
             return -0.001
-        elif  garbage < self.last_step_garbage:
-           # self.last_step_garbage_min = garbage
+        elif garbage < self.last_step_garbage:
+            # self.last_step_garbage_min = garbage
             return 0.001
         self.last_step_garbage = garbage
         return 0
@@ -129,13 +131,14 @@ class SweeperReward(Wrapper):
         reward += add_reward
         return obs, reward, done, info
 
+
 class RandomTarget(gym.Wrapper):
-    #current_env  = [[None]]
-    def __init__(self, env, thresh = 0.37):
+    # current_env  = [[None]]
+    def __init__(self, env, thresh=0.17):
         super().__init__(env)
         self.thresh = thresh
         self.total_reward = 0
-        self.sum = self.thresh/10
+        self.sum = self.thresh / 10
         self.count = 0
         self.changes = 0
 
@@ -144,7 +147,7 @@ class RandomTarget(gym.Wrapper):
         if done:
             self.count += 1
             self.sum += reward
-            self.total_reward = self.sum/ self.count
+            self.total_reward = self.sum / self.count
             # print("\n --- upd reward ---- \n")
             # print("blocks count = ", len(np.where(info['grid']!=0)[0]))
             # print("reward = ",self.total_reward)
@@ -153,7 +156,6 @@ class RandomTarget(gym.Wrapper):
             # print(" --- upd reward ---- \n")
 
             if (self.total_reward > self.thresh):
-
                 # print("\n ----Make new Goal ----- \n")
                 self.changes += 1
                 # task = RandomTasks(
@@ -170,11 +172,11 @@ class RandomTarget(gym.Wrapper):
                 self.count = 0
                 self.total_reward = self.thresh / 10
                 info['new_env'] = True
-        return  obs, reward, done, info
+        return obs, reward, done, info
 
 
 class CompleteReward(Wrapper):
-    def __init__(self, env, spec = "all", hard_reset = False):
+    def __init__(self, env, spec="hardany", hard_reset=False):
         super().__init__(env)
         self.T = spec
         self.old_bs = 0
@@ -185,7 +187,7 @@ class CompleteReward(Wrapper):
 
     def garbage(self, info):
         roi = info['grid'][info['target_grid'] == 0]
-        return len((np.where(roi!=0)[0]))
+        return len((np.where(roi != 0)[0]))
 
     def check_complete(self, info):
         roi = info['grid'][info['target_grid'] != 0]
@@ -208,7 +210,7 @@ class CompleteReward(Wrapper):
         else:
             if bs > self.old_bs:
                 target_size = np.sum(info['target_grid'] != 0)
-                reward = 1/target_size
+                reward = 1 / target_size
                 self.old_bs = bs
             else:
                 reward = 0
@@ -267,7 +269,8 @@ class CompleteScold(Wrapper):
         obs, reward, done, info = super().step(action)
         check_fill = self.check_filling(info)
         if check_fill:
-            reward -= 0.0005
+            reward -= 0.005
+            done = True
         return obs, reward, done, info
 
 
@@ -491,6 +494,57 @@ class FakeIglu(gym.Env):
         pass
 
 
+class ActLogger(Wrapper):
+    def __init__(self, env, every=50):
+        super().__init__(env)
+        runtime = timestamp = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+        self.dirname = f'pics_logs/run-{runtime}'
+        self.every = every
+        self.filename = None
+        self.pic = np.zeros((11, 11, 3))
+        self.running_reward = 0
+        self.actions = []
+        self.info = None
+        self.flushed = False
+        os.makedirs(self.dirname, exist_ok=True)
+
+    def flush(self):
+        if self.filename is not None:
+            self.pic[np.where(self.info['grid'] != 0)[1:]] = 0.4  # застройка
+            self.pic[self.first_cube] = 1  # первый кубик
+            pic = cv2.resize(self.pic.copy(), (256, 256))
+            plt.imsave(self.filename + ".png", pic)
+        timestamp = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+        self.flushed = True
+        self.first_cube = None
+        self.info = None
+        uid = str(uuid.uuid4().hex)
+        name = f'episode-{timestamp}-{uid}'
+        self.filename = os.path.join(self.dirname, name)
+        self.pic = np.zeros((11, 11, 3))
+
+    def reset(self):
+        if not self.flushed:
+            self.flush()
+        return super().reset()
+
+    def step(self, action):
+        # assuming dict
+        self.flushed = False
+        obs, reward, done, info = super().step(action)
+        self.info = info
+        pose = info['agentPos'][:3:2] + 5
+
+        if (pose[0] > 0 and pose[0] <= 10) and (pose[1] > 0 and pose[1] <= 10):
+            self.pic[int(pose[0]), int(pose[1]), 1] = 0.6  # маршрут
+        if len(np.where(info['grid'] != 0)[0]) == 1:
+            self.first_cube = np.where(info['grid'] != 0)[1:]
+
+            self.pic[np.where(obs['target_grid'] != 0)[1:]] = 0.18  # цель
+            # self.pic[first_cube,0] = 10 #первый кубик
+        return obs, reward, done, info
+
+
 class VideoLogger(Wrapper):
     def __init__(self, env, every=50):
         super().__init__(env)
@@ -505,8 +559,8 @@ class VideoLogger(Wrapper):
 
     def flush(self):
         if self.filename is not None:
-            with open(f'{self.filename}-r{self.running_reward}.json', 'w') as f:
-                json.dump(self.actions, f)
+            # with open(f'{self.filename}-r{self.running_reward}.json', 'w') as f:
+            #  json.dump(self.actions, f)
             self.out.release()
             with open(f'{self.filename}-obs.pkl', 'wb') as f:
                 pickle.dump(self.obs, f)
@@ -543,12 +597,14 @@ class VideoLogger(Wrapper):
         #                 new_action[key] = new_action[key].tolist()
         obs, reward, done, info = super().step(action)
         self.actions.append(action)
-        self.out.write(obs['pov'][:, :, ::-1].astype(np.uint8))
-        self.obs.append({k: v for k, v in obs.items() if k != 'pov'})
+        image = np.transpose(obs['obs'], (1, 2, 0))
+        print(image.shape)
+        self.out.write(image[:, :, ::-1].astype(np.uint8))
+        self.obs.append({k: v for k, v in obs.items() if k != 'obs'})
         self.obs[-1]['reward'] = reward
         self.running_reward += reward
-        if done:
-            self.out.release()
+        # if done:
+        #   self.out.release()
         return obs, reward, done, info
 
 
