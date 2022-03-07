@@ -24,6 +24,7 @@ from wrappers import \
     SweeperReward, \
     RandomTarget, \
     VideoLogger, \
+     RandomRotation, \
     Logger
 from custom_tasks import make_3d_cube, make_plane
 import numpy as np
@@ -142,10 +143,11 @@ def make_iglu(*args, **kwargs):
 
     env = PixelFormatChwWrapper(env)
     env = Discretization(env, flat_action_space('human-level'))
+    env = RandomRotation(env)
     env = RandomTarget(env)
     env = PovToObs(env)
 
-    num_workers, envs_per_worker = 6, 1
+    num_workers, envs_per_worker = 15, 1
     env.reward_range = (-float('inf'), float('inf'))
     env.num_agents = num_workers * envs_per_worker
     env.is_multiagent = False

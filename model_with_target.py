@@ -22,17 +22,22 @@ CUDA_LAUNCH_BLOCKING = 1
 
 
 class ResBlock(nn.Module):
-    def __init__(self, cfg, input_ch, output_ch, timing):
+    def __init__(self, cfg, input_ch, output_ch, timing,kernel = 3, wl = True):
         super().__init__()
 
         self.timing = timing
-
-        layers = [
-            nonlinearity(cfg),
-            nn.Conv2d(input_ch, output_ch, kernel_size=3, stride=1, padding=1),  # padding SAME
-            nonlinearity(cfg),
-            nn.Conv2d(output_ch, output_ch, kernel_size=3, stride=1, padding=1),  # padding SAME
-        ]
+        if wl:
+            layers = [
+                nonlinearity(cfg),
+                nn.Conv2d(input_ch, output_ch, kernel_size=kernel, stride=1, padding=1),  # padding SAME
+                nonlinearity(cfg),
+                nn.Conv2d(output_ch, output_ch, kernel_size=kernel, stride=1, padding=1),  # padding SAME
+            ]
+        else:
+            layers = [
+                nn.Conv2d(input_ch, output_ch, kernel_size=kernel, stride=1, padding=1),  # padding SAME
+                nn.Conv2d(output_ch, output_ch, kernel_size=kernel, stride=1, padding=1),  # padding SAME
+            ]
 
         self.res_block_core = nn.Sequential(*layers)
 
@@ -55,9 +60,10 @@ class ResnetEncoderWithTarget(EncoderBase):
         target_shape = get_obs_shape(obs_space['target_grid'])
         input_ch_targ = target_shape.obs[0]
 
-        inv_emded_size = 32
-        resnet_conf = [[16, 2], [32, 2], [32, 2]]
-        target_conf = [[16, 2], [16, 2]]
+        inv_emded_size = 64
+        resnet_conf = [[32, 2], [64, 2], [64, 2]]
+        target_conf = [[64,3]]
+       # target_conf = [[16, 2], [32, 2], [32, 2]]
 
 
         curr_input_channels = input_ch
@@ -77,12 +83,13 @@ class ResnetEncoderWithTarget(EncoderBase):
         self.conv_head = nn.Sequential(*layers)
 
         ### Target embedding
+        kernel = 3
         for i, (out_channels, res_blocks) in enumerate(target_conf):
             layers_target.extend([
-                nn.Conv2d(input_ch_targ, out_channels, kernel_size=3, stride=1, padding=1),  # padding SAME
+                nn.Conv2d(input_ch_targ, out_channels, kernel_size=kernel, stride=1, padding=1),  # padding SAME
             ])
             for j in range(res_blocks):
-                layers_target.append(ResBlock(cfg, out_channels, out_channels, self.timing))
+                layers_target.append(ResBlock(cfg, out_channels, out_channels, self.timing, kernel = kernel, wl = True))
             input_ch_targ = out_channels
         layers_target.append(nonlinearity(cfg))
         self.conv_target = nn.Sequential(*layers_target)
@@ -95,7 +102,7 @@ class ResnetEncoderWithTarget(EncoderBase):
         )
 
         self.conv_head_out_size = calc_num_elements(self.conv_head, obs_shape.obs)
-        self.conv_target_out_size = calc_num_elements(self.conv_target_out_size, target_shape.obs)
+        self.conv_target_out_size = calc_num_elements(self.conv_target, target_shape.obs)
         self.init_fc_blocks(self.conv_head_out_size + self.conv_target_out_size+ inv_emded_size)
 
     #   self.init_fc_blocks(self.conv_head_out_size)

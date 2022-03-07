@@ -134,7 +134,7 @@ class SweeperReward(Wrapper):
 
 class RandomTarget(gym.Wrapper):
     # current_env  = [[None]]
-    def __init__(self, env, thresh=0.17):
+    def __init__(self, env, thresh=0.07):
         super().__init__(env)
         self.thresh = thresh
         self.total_reward = 0
@@ -145,6 +145,7 @@ class RandomTarget(gym.Wrapper):
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
         if done:
+            self.start_position = (0.5, 227, 0.5, 0.0, np.random.choice([0, 90, -90]))
             self.count += 1
             self.sum += reward
             self.total_reward = self.sum / self.count
@@ -302,6 +303,33 @@ class SelectAndPlace(ActionsWrapper):
                 yield action
                 action = self.env.action_space.noop()
         yield action
+
+
+class RandomRotation(Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.steps = 0
+        self.vec = np.random.choice([1, -1])
+        self.total_rots = np.random.randint(0, 72)
+
+    def reset(self):
+        self.steps = 0
+        self.vec = np.random.choice([1, -1])
+        self.total_rots = np.random.randint(0, 72)
+        return super().reset()
+
+    def step(self, action):
+
+        self.steps += 1
+        if self.steps <= self.total_rots:
+            # vec = np.random.choice([1,-1])
+            if self.vec == 1:
+                obs, reward, done, info = super().step(9)
+            else:
+                obs, reward, done, info = super().step(10)
+        else:
+            obs, reward, done, info = super().step(action)
+        return obs, reward, done, info
 
 
 def flat_action_space(action_space):
@@ -511,8 +539,10 @@ class ActLogger(Wrapper):
     def flush(self):
         if self.filename is not None:
             self.pic[np.where(self.info['grid'] != 0)[1:]] = 0.4  # застройка
-            self.pic[self.first_cube] = 1  # первый кубик
+            if self.first_cube is not None:
+                self.pic[self.first_cube] = 1  # первый кубик
             pic = cv2.resize(self.pic.copy(), (256, 256))
+            # print(self.first_cube)
             plt.imsave(self.filename + ".png", pic)
         timestamp = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
         self.flushed = True
@@ -532,11 +562,14 @@ class ActLogger(Wrapper):
         # assuming dict
         self.flushed = False
         obs, reward, done, info = super().step(action)
+        if self.info is None:
+            self.pic[np.where(obs['target_grid'] != 0)[1:]] = 0.18  # цель
         self.info = info
         pose = info['agentPos'][:3:2] + 5
 
         if (pose[0] > 0 and pose[0] <= 10) and (pose[1] > 0 and pose[1] <= 10):
             self.pic[int(pose[0]), int(pose[1]), 1] = 0.6  # маршрут
+        #  print("go")
         if len(np.where(info['grid'] != 0)[0]) == 1:
             self.first_cube = np.where(info['grid'] != 0)[1:]
 
@@ -598,7 +631,7 @@ class VideoLogger(Wrapper):
         obs, reward, done, info = super().step(action)
         self.actions.append(action)
         image = np.transpose(obs['obs'], (1, 2, 0))
-        print(image.shape)
+        # print(image.shape)
         self.out.write(image[:, :, ::-1].astype(np.uint8))
         self.obs.append({k: v for k, v in obs.items() if k != 'obs'})
         self.obs[-1]['reward'] = reward
