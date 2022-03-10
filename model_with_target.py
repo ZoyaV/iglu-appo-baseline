@@ -53,7 +53,7 @@ class ResBlock(nn.Module):
 class ResnetEncoderWithTarget(EncoderBase):
     def __init__(self, cfg, obs_space, timing):
         super().__init__(cfg, timing)
-        # raise Exception(obs_space)
+        #raise Exception(obs_space)
         obs_shape = get_obs_shape(obs_space['obs'])
         input_ch = obs_shape.obs[0]
 
@@ -62,7 +62,7 @@ class ResnetEncoderWithTarget(EncoderBase):
 
         inv_emded_size = 64
         resnet_conf = [[32, 2], [64, 2], [64, 2]]
-        target_conf = [[64,3]]
+        target_conf = [[32, 3], [64,3]]
        # target_conf = [[16, 2], [32, 2], [32, 2]]
 
 
@@ -95,7 +95,7 @@ class ResnetEncoderWithTarget(EncoderBase):
         self.conv_target = nn.Sequential(*layers_target)
 
         self.inventory_compass_emb = nn.Sequential(
-            nn.Linear(7, inv_emded_size),
+            nn.Linear(11, inv_emded_size),
             nn.ReLU(),
             nn.Linear(inv_emded_size, inv_emded_size),
             nn.ReLU(),
@@ -113,7 +113,8 @@ class ResnetEncoderWithTarget(EncoderBase):
         x = self.conv_head(obs_dict['obs'])
         x = x.contiguous().view(-1, self.conv_head_out_size)
 
-        inventory_compass = torch.cat([obs_dict['inventory']/20, (obs_dict['compass']+180)/360], -1)
+        suma = torch.from_numpy(np.array([10,8,10,360,180])).cuda()
+        inventory_compass = torch.cat([obs_dict['inventory']/20, (obs_dict['agentPos']+suma)/suma], -1)
         inv_comp_emb = self.inventory_compass_emb(inventory_compass)
 
         tg = self.conv_target(obs_dict['target_grid']/6)
@@ -124,61 +125,3 @@ class ResnetEncoderWithTarget(EncoderBase):
         x = self.forward_fc_blocks(head_input)
         return x
 
-
-class PovBaselineModelTarget(TorchModelV2, nn.Module):
-    def __init__(self, obs_space, action_space, num_outputs, model_config,
-                 name):
-        nn.Module.__init__(self)
-        super().__init__(obs_space, action_space, num_outputs,
-                         model_config, name)
-        if num_outputs is None:
-            # required by rllib's lstm wrapper
-            num_outputs = int(np.product(self.obs_space.shape))
-        pov_embed_size = 256
-        inv_emded_size = 256
-        embed_size = 512
-        target_emded_size = 256
-        self.pov_embed = nn.Sequential(
-            nn.Conv2d(3, 64, 4, 4),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, 4, 4),
-            nn.ReLU(),
-            nn.Conv2d(128, pov_embed_size, 4, 4),
-            nn.ReLU(),
-        )
-        self.inventory_compass_emb = nn.Sequential(
-            nn.Linear(7, inv_emded_size),
-            nn.ReLU(),
-            nn.Linear(inv_emded_size, inv_emded_size),
-            nn.ReLU(),
-        )
-        self.target_grid_emb = nn.Sequential(
-            nn.Linear(9 * 11 * 11, inv_emded_size),
-            nn.ReLU(),
-            nn.Linear(inv_emded_size, inv_emded_size),
-            nn.ReLU(),
-        )
-        self.head = nn.Sequential(
-            nn.Linear(pov_embed_size + inv_emded_size + target_emded_size, embed_size),
-            nn.ReLU(),
-            nn.Linear(embed_size, embed_size),
-            nn.ReLU(),
-            nn.Linear(embed_size, num_outputs),
-        )
-
-    def forward(self, input_dict, state, seq_lens):
-        obs = input_dict['obs']
-        pov = obs['pov'] / 255. - 0.5
-        pov = pov.transpose(2, 3).transpose(1, 2).contiguous()
-        pov_embed = self.pov_embed(pov)
-        pov_embed = pov_embed.reshape(pov_embed.shape[0], -1)
-
-        inventory_compass = torch.cat([obs['inventory'], obs['compass']], -1)
-        inv_comp_emb = self.inventory_compass_emb(inventory_compass)
-
-        tg = obs['target_grid']
-        tg = tg.reshape(tg.shape[0], -1)
-        tg_embed = self.target_grid_emb(tg)
-
-        head_input = torch.cat([pov_embed, inv_comp_emb, tg_embed], -1)
-        return self.head(head_input), state

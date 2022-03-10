@@ -24,7 +24,7 @@ from wrappers import \
     SweeperReward, \
     RandomTarget, \
     VideoLogger, \
-     RandomRotation, \
+    RandomRotation, \
     Logger
 from custom_tasks import make_3d_cube, make_plane
 import numpy as np
@@ -128,10 +128,8 @@ class PixelFormatChwWrapper(ObservationWrapper):
 def make_iglu(*args, **kwargs):
     import iglu
     env = gym.make('IGLUSilentBuilder-v0', max_steps=5000)
-    env.update_taskset(make_plane(rand=True))
+    env.update_taskset(make_plane(rand=False))
     env = SelectAndPlace(env)
-
-    # env = PovToObs(env)
 
     env = VisualObservationWrapper(env, True)
 
@@ -144,7 +142,7 @@ def make_iglu(*args, **kwargs):
     env = PixelFormatChwWrapper(env)
     env = Discretization(env, flat_action_space('human-level'))
     env = RandomRotation(env)
-    env = RandomTarget(env)
+    #  env = RandomTarget(env)
     env = PovToObs(env)
 
     num_workers, envs_per_worker = 15, 1
