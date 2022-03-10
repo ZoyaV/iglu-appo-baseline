@@ -36,10 +36,5 @@ def make_plane(rand=False, size=0.35, rand_conf=1 / 4):
     else:
         x = 0
         y = 0
-
-    print(x, y)
     custom_grid[0, x:x + plane_size, y:y + plane_size] = 1  # blue color
-    return CustomTasks([
-        ('<Architect> Please, build a stack of three blue blocks somewhere.\n'
-         '<Builder> Sure.',
-         custom_grid)])
+    return custom_grid

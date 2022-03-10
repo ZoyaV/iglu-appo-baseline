@@ -28,7 +28,7 @@ from wrappers import \
     Logger
 from custom_tasks import make_3d_cube, make_plane
 import numpy as np
-
+from fast_iglu import IgluFast
 
 class MinerlOnlyObs(gym.ObservationWrapper):
 
@@ -126,9 +126,9 @@ class PixelFormatChwWrapper(ObservationWrapper):
 
 
 def make_iglu(*args, **kwargs):
-    import iglu
-    env = gym.make('IGLUSilentBuilder-v0', max_steps=5000)
-    env.update_taskset(make_plane(rand=False))
+    custom_grid = make_plane(rand=True)
+    env = IgluFast(custom_grid, render=True)
+
     env = SelectAndPlace(env)
 
     env = VisualObservationWrapper(env, True)
@@ -140,18 +140,17 @@ def make_iglu(*args, **kwargs):
     # env = SweeperReward(env)
 
     env = PixelFormatChwWrapper(env)
-    env = Discretization(env, flat_action_space('human-level'))
+    # print(env.action_space.no_op())
+    # env = Discretization(env, flat_action_space('human-level'))
+    # 7, 8, 9, 10
     env = RandomRotation(env)
-    #  env = RandomTarget(env)
-    env = PovToObs(env)
+    env = RandomTarget(env)
+    # env = PovToObs(env)
 
-    num_workers, envs_per_worker = 15, 1
+    num_workers, envs_per_worker = 1, 1
     env.reward_range = (-float('inf'), float('inf'))
     env.num_agents = num_workers * envs_per_worker
     env.is_multiagent = False
-
-    #  env = VideoLogger(env)
-
     return env
 
 

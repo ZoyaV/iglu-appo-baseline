@@ -294,27 +294,27 @@ class SizeReward(Wrapper):
 
 class SelectAndPlace(ActionsWrapper):
     def wrap_action(self, action):
-        # mapping = {
-        #       'forward': 0,
-        #         'back': 1,
-        #       'left': 2,
-        ##       'right': 3,
-        #       'jump': 4,
-        #        'attack': 5,
-        #       'use': 6,
-        #        'camera': 7,
-        #       'hotbar': 8,
-        #   }
+        mapping = {
+              'forward': 0,
+                'back': 1,
+              'left': 2,
+        #       'right': 3,
+              'jump': 4,
+               'attack': 5,
+              'use': 6,
+               'camera': 7,
+              'hotbar': 8,
+          }
         #  print(action)
         #  print(mapping)
-        if action['hotbar'] != 0:
+        if action[mapping['hotbar']] != 0:
             yield action
-            # action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
-            action['use'] = 1
-        if action['use'] == 1 or action['attack'] == 1:
+            action = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+            action[mapping['use']] = 1
+        if action[mapping['use']] == 1 or action[mapping['attack']] == 1:
             for _ in range(3):
                 yield action
-            # action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+             action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
         yield action
 
 
@@ -332,27 +332,27 @@ class RandomRotation(Wrapper):
         return super().reset()
 
     def step(self, action):
-        #         mapping = {
-        #             'forward': 0,
-        #             'back': 1,
-        #             'left': 2,
-        #             'right': 3,
-        #             'jump': 4,
-        #             'attack': 5,
-        #             'use': 6,
-        #             'camera': 7,
-        #             'hotbar': 8,
-        #         }
-        # action = [0,0,0,0,0,0,0,0,0]
+        mapping = {
+            'forward': 0,
+            'back': 1,
+            'left': 2,
+            'right': 3,
+            'jump': 4,
+            'attack': 5,
+            'use': 6,
+            'camera': 7,
+            'hotbar': 8,
+        }
+        action = [0,0,0,0,0,0,0,0,0]
         self.steps += 1
         if self.steps <= self.total_rots:
             # vec = np.random.choice([1,-1])
             if self.vec == 1:
-                # action[mapping['camera']]=1
-                obs, reward, done, info = super().step(9)
+                action[mapping['camera']]=1
+                obs, reward, done, info = super().step(action)
             else:
-                #  action[mapping['camera']]=0
-                obs, reward, done, info = super().step(10)
+                action[mapping['camera']]=0
+                obs, reward, done, info = super().step(action)
         else:
             obs, reward, done, info = super().step(action)
         return obs, reward, done, info
@@ -727,80 +727,12 @@ class Logger(Wrapper):
         return obs, reward, done, info
 
 
-class OneBlockObservationWrapper(ObsWrapper):
-    def __init__(self, env, include_target=False):
-        super().__init__(env)
-        self.observation_space = {
-            'pov': gym.spaces.Box(low=0, high=255, shape=(64, 64, 3)),
-            'inventory': gym.spaces.Box(low=0.0, high=20.0, shape=(6,)),
-            'compass': gym.spaces.Box(low=-180.0, high=180.0, shape=(1,))
-        }
-        if include_target:
-            self.observation_space['target'] = \
-                spaces.Tuple(spaces.Discrete(9), spaces.Discrete(11), spaces.Discrete(11))
-        self.observation_space = gym.spaces.Dict(self.observation_space)
-
-    def observation(self, obs, reward=None, done=None, info=None):
-        if info is not None:
-            if 'target_grid' in info:
-                target_grid = info['target_grid']
-                # del info['target_grid']
-            else:
-                logger.error(f'info: {info}')
-                if hasattr(self.unwrapped, 'should_reset'):
-                    self.unwrapped.should_reset(True)
-                target_grid = self.env.unwrapped.tasks.current.target_grid
-        else:
-            target_grid = self.env.unwrapped.tasks.current.target_grid
-        target = np.where(target_grid != 0)
-        return {
-            'pov': obs['pov'].astype(np.float32),
-            'inventory': obs['inventory'],
-            'compass': np.array([obs['compass']['angle'].item()]),
-            'target': (target[0, 0], target[1, 0], target[2, 0])
-        }
-
-
-class VisualOneBlockObservationWrapper(ObsWrapper):
-    def __init__(self, env, include_target=False):
-        super().__init__(env)
-        self.observation_space = {
-            'pov': gym.spaces.Box(low=0, high=255, shape=(64, 64, 3)),
-            'inventory': gym.spaces.Box(low=0.0, high=20.0, shape=(6,)),
-            'compass': gym.spaces.Box(low=-180.0, high=180.0, shape=(1,)),
-            'target': spaces.Tuple([spaces.Discrete(9), spaces.Discrete(11), spaces.Discrete(11)])
-        }
-        if include_target:
-            self.observation_space['target_grid'] = \
-                gym.spaces.Box(low=0, high=6, shape=(9, 11, 11))
-        self.observation_space = gym.spaces.Dict(self.observation_space)
-
-    def observation(self, obs, reward=None, done=None, info=None):
-        if info is not None:
-            if 'target_grid' in info:
-                target_grid = info['target_grid']
-                # del info['target_grid']
-            else:
-                logger.error(f'info: {info}')
-                if hasattr(self.unwrapped, 'should_reset'):
-                    self.unwrapped.should_reset(True)
-            # target_grid = self.env.unwrapped.tasks.current.target_grid
-        else:
-            target_grid = info['target_grid']
-        target = np.where(target_grid != 0)
-        return {
-            'pov': obs['pov'].astype(np.float32),
-            'inventory': obs['inventory'],
-            'compass': np.array([obs['compass']['angle'].item()]),
-            'target': (target[0][0], target[1][0], target[2][0])
-        }
-
 
 class VisualObservationWrapper(ObsWrapper):
     def __init__(self, env, include_target=False):
         super().__init__(env)
         self.observation_space = {
-            'pov': gym.spaces.Box(low=0, high=255, shape=(64, 64, 3)),
+            'obs': gym.spaces.Box(low=0, high=255, shape=(64, 64, 3)),
             'inventory': gym.spaces.Box(low=0.0, high=20.0, shape=(6,)),
             # 'compass': gym.spaces.Box(low=-180.0, high=180.0, shape=(1,))
         }
@@ -822,16 +754,16 @@ class VisualObservationWrapper(ObsWrapper):
                 logger.error(f'info: {info}')
                 if hasattr(self.unwrapped, 'should_reset'):
                     self.unwrapped.should_reset(True)
-                target_grid = self.env.unwrapped.tasks.current.target_grid
-            # target_grid = self.env.task.target_grid
+               # target_grid = self.env.unwrapped.tasks.current.target_grid
+                target_grid = self.env.task.target_grid
 
         else:
-            # target_grid = self.env.task.target_grid
-            target_grid = self.env.unwrapped.tasks.current.target_grid
+             target_grid = self.env.task.target_grid
+            #target_grid = self.env.unwrapped.tasks.current.target_grid
             # target_grid = info['target_grid']
         print(obs)
         observe = {
-            'pov': obs['pov'].astype(np.float32),
+            'obs': obs['obs'].astype(np.float32),
             'inventory': obs['inventory'],
             # 'compass': np.array([obs['compass']['angle'].item()])
         }
