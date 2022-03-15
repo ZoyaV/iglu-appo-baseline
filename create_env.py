@@ -5,10 +5,10 @@ import minerl
 from RayEnvWrapper import WrapperRayVecEnv
 import gym
 from gym import spaces
-import iglu
+#import iglu
 import sys
 import wandb
-from iglu.tasks import RandomTasks, TaskSet
+#from iglu.tasks import RandomTasks, TaskSet
 from wrappers import \
     SelectAndPlace, \
     Discretization, \
@@ -17,7 +17,6 @@ from wrappers import \
     TimeLimit, \
     VectorObservationWrapper, \
     VisualObservationWrapper, \
-    VisualOneBlockObservationWrapper, \
     CompleteReward, \
     CompleteScold, \
     Closeness, \

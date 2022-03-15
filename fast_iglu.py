@@ -28,9 +28,6 @@ class gwDict(Dict):
                             ('use', 0)])
 
 
-from create_env import PixelFormatChwWrapper, PovToObs
-
-
 class IgluFast(Env):
     def __init__(self, target, render=True) -> None:
         self.world = World()

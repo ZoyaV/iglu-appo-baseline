@@ -16,7 +16,7 @@ from minerl_patched.herobraine.hero import spaces
 from custom_tasks import make_3d_cube, make_plane
 import matplotlib.pyplot as plt
 import cv2
-from iglu.tasks import RandomTasks
+#from iglu.tasks import RandomTasks
 
 logger = logging.getLogger(__file__)
 IGLU_ENABLE_LOG = os.environ.get('IGLU_ENABLE_LOG', '')
@@ -314,7 +314,7 @@ class SelectAndPlace(ActionsWrapper):
         if action[mapping['use']] == 1 or action[mapping['attack']] == 1:
             for _ in range(3):
                 yield action
-             action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+            action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
         yield action
 
 

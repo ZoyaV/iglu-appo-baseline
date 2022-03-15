@@ -1,6 +1,6 @@
 import gym
 import numpy as np
-from iglu.tasks import CustomTasks
+#from iglu.tasks import CustomTasks
 import random
 
 
