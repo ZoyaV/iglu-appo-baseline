@@ -71,7 +71,7 @@ class PixelFormatChwWrapper(ObservationWrapper):
 
         if isinstance(env.observation_space, gym.spaces.Dict):
             #   raise Exception(env.observation_space.spaces)
-            img_obs_space = env.observation_space['pov']
+            img_obs_space = env.observation_space['obs']
             self.dict_obs_space = True
         else:
             img_obs_space = env.observation_space
@@ -94,8 +94,8 @@ class PixelFormatChwWrapper(ObservationWrapper):
         new_shape = [c, h, w]
 
         if self.dict_obs_space:
-            dtype = env.observation_space.spaces['pov'].dtype if env.observation_space.spaces[
-                                                                     'pov'].dtype is not None else np.float32
+            dtype = env.observation_space.spaces['obs'].dtype if env.observation_space.spaces[
+                                                                     'obs'].dtype is not None else np.float32
         else:
             dtype = env.observation_space.dtype if env.observation_space.dtype is not None else np.float32
 
@@ -103,7 +103,7 @@ class PixelFormatChwWrapper(ObservationWrapper):
 
         if self.dict_obs_space:
             self.observation_space = env.observation_space
-            self.observation_space.spaces['pov'] = new_img_obs_space
+            self.observation_space.spaces['obs'] = new_img_obs_space
         else:
             self.observation_space = new_img_obs_space
 
