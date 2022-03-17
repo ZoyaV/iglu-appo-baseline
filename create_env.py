@@ -21,6 +21,7 @@ from wrappers import \
     CompleteReward, \
     CompleteScold, \
     Closeness, \
+    ClosenessTL, \
     SweeperReward, \
     RandomTarget, \
     VideoLogger, \
