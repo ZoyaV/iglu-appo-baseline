@@ -113,7 +113,7 @@ class ResnetEncoderWithTarget(EncoderBase):
        # x = self.conv_head(obs_dict['obs'])
       #  x = x.contiguous().view(-1, self.conv_head_out_size)
 
-        suma = torch.from_numpy(np.array([10,8,10,360,180])).cuda()
+        suma = torch.from_numpy(np.array([10,8,10,180,360])).cuda()
         inventory_compass = torch.cat([obs_dict['inventory']/20, (obs_dict['agentPos']+suma)/suma], -1)
         inv_comp_emb = self.inventory_compass_emb(inventory_compass)
 
