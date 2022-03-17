@@ -136,16 +136,16 @@ def make_iglu(*args, **kwargs):
 
     #env = CompleteReward(env)
     env = TimeLimit(env, limit=500)
-   # env = Closeness(env)
+    env = Closeness(env)
     env = CompleteScold(env)
     # env = SweeperReward(env)
 
    # env = PixelFormatChwWrapper(env)
     # print(env.action_space.no_op())
-  #  env = DiscretizationTuple(env)
+    env = DiscretizationTuple(env)
     # 7, 8, 9, 10
-  #  env = RandomRotation(env)
-    env = RandomTarget(env)
+    env = RandomRotation(env)
+   # env = RandomTarget(env)
     # env = PovToObs(env)
 
     num_workers, envs_per_worker = 1, 1

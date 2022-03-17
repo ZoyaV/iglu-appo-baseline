@@ -73,12 +73,13 @@ class IgluFast(Env):
         ))
 
         self.inv_mapping = ['forward', 'back', 'left', 'right', 'jump', 'attack', 'use'] \
-                           + ['camera']*4 + ['hotbar']*6
+                           + ['camera', 'camera', 'camera', 'camera'] \
+                           + ['hotbar', 'hotbar', 'hotbar', 'hotbar', 'hotbar', 'hotbar']
 
         self.observation_space = Dict({
             'agentPos': Box(low=0, high=360, shape=(5,)),
             'inventory': Box(low=0, high=20, shape=(6,)),
-      #      'obs': Box(low=0, high=1, shape=(64, 64, 3)),
+            #      'obs': Box(low=0, high=1, shape=(64, 64, 3)),
         })
         self.max_int = 0
         self.do_render = render
@@ -116,7 +117,7 @@ class IgluFast(Env):
         obs = {
             'agentPos': np.array([0, 0, 0, 0, 0]),
             'inventory': np.array([20 for _ in range(6)]),
-       #     'obs': self.get_pov()
+            #     'obs': self.get_pov()
         }
         return obs
 
@@ -126,17 +127,22 @@ class IgluFast(Env):
         return self.renderer.render()
 
     def parse_action_inv(self, action):
-        naction = (0,0,0,0,0,0,0,0,0)
-        try:
-            num = np.where(action!=0)[0][0]
-            waction = self.inv_mapping[num]
-            if action == 'camera':
-                naction[self.mapping[waction]] = action - 7
-            if action == 'hotbar':
-                naction[self.mapping[waction]] = action - 11
-        except:
-            return naction
-        return naction
+
+        naction = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        # num = np.where(action!=0)[0][0]
+        # print(self.inv_mapping)
+        waction = self.inv_mapping[action]
+        # print(waction)
+        if waction == 'camera':
+            naction[self.mapping[waction]] = action - 6
+        elif waction == 'hotbar':
+            naction[self.mapping[waction]] = action - 10
+        else:
+            naction[action] = 1
+        #         except:
+        #             return naction
+        return tuple(naction)
 
     def parse_action(self, action):
         strafe = [0, 0]
@@ -162,7 +168,7 @@ class IgluFast(Env):
 
     def step(self, action):
 
-        strafe, jump, inventory, camera, remove, add = self.parse_action(action)
+        strafe, jump, inventory, camera, remove, add = self.parse_action(self.parse_action_inv(action))
         self.agent.movement(strafe=strafe, jump=jump, inventory=inventory)
         if camera == 0:
             self.agent.move_camera(0, 0)
@@ -182,7 +188,8 @@ class IgluFast(Env):
         obs = {'agentPos': np.array([x, y, z, pitch, yaw])}
         obs['inventory'] = np.array(copy(self.agent.inventory))
         obs['grid'] = self.grid.copy()
-       # obs['obs'] = self.get_pov()
+        #  info['obs'] = self.get_pov()
+        # obs['obs'] = self.get_pov()
         grid_size = (self.grid != 0).sum().item()
         wrong_placement = (self.prev_grid_size - grid_size) * 1
         max_int = self.task.maximal_intersection(self.grid) if wrong_placement != 0 else self.max_int
