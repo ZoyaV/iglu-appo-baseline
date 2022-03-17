@@ -62,7 +62,7 @@ class ResnetEncoderWithTarget(EncoderBase):
 
         inv_emded_size = 64
         resnet_conf = [[32, 2], [64, 2], [64, 2]]
-        target_conf = [[32, 3], [64,3]]
+        target_conf = [[64, 3]]
        # target_conf = [[16, 2], [32, 2], [32, 2]]
 
 
@@ -109,11 +109,11 @@ class ResnetEncoderWithTarget(EncoderBase):
 
     def forward(self, obs_dict):
 
-
-        x = self.conv_head(obs_dict['obs'])
+     #   raise Exception(obs_dict)
+        x = self.conv_head(obs_dict['obs']/255)
         x = x.contiguous().view(-1, self.conv_head_out_size)
 
-        suma = torch.from_numpy(np.array([10,8,10,360,180])).cuda()
+        suma = torch.from_numpy(np.array([10,8,10,180,360])).cuda()
         inventory_compass = torch.cat([obs_dict['inventory']/20, (obs_dict['agentPos']+suma)/suma], -1)
         inv_comp_emb = self.inventory_compass_emb(inventory_compass)
 
