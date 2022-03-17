@@ -133,10 +133,10 @@ def make_iglu(*args, **kwargs):
 
     env = VisualObservationWrapper(env, True)
 
-    env = CompleteReward(env)
+    #env = CompleteReward(env)
     env = TimeLimit(env, limit=500)
-    env = Closeness(env)
-    env = CompleteScold(env)
+    env = ClosenessTL(env)
+   # env = CompleteScold(env)
     # env = SweeperReward(env)
 
     env = PixelFormatChwWrapper(env)
@@ -145,7 +145,7 @@ def make_iglu(*args, **kwargs):
     #  env = RandomTarget(env)
     env = PovToObs(env)
 
-    num_workers, envs_per_worker = 15, 1
+    num_workers, envs_per_worker = 6, 1
     env.reward_range = (-float('inf'), float('inf'))
     env.num_agents = num_workers * envs_per_worker
     env.is_multiagent = False

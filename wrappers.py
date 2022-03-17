@@ -255,6 +255,27 @@ class Closeness(Wrapper):
         return obs, reward, done, info
 
 
+class ClosenessTL(Closeness):
+    def __init__(self, env):
+        super().__init__(env)
+        self.max_steps = 128
+        self.steps = 0
+
+    def reset(self):
+        self.steps = 0
+        return super().reset()
+
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        self.steps += 1
+        if self.steps >= self.max_steps:
+            reward = -self.closeness(info)
+            done = True
+        else:
+            reward = 0
+        return obs, reward/16, done, info
+
+
 class CompleteScold(Wrapper):
     def __init__(self, env):
         super().__init__(env)
