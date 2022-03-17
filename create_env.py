@@ -12,6 +12,7 @@ import wandb
 from wrappers import \
     SelectAndPlace, \
     Discretization, \
+    DiscretizationTuple, \
     flat_action_space, \
     SizeReward, \
     TimeLimit, \
@@ -27,6 +28,7 @@ from wrappers import \
     Logger
 from custom_tasks import make_3d_cube, make_plane
 import numpy as np
+from gridworld.env import GridWorld
 from fast_iglu import IgluFast
 
 class MinerlOnlyObs(gym.ObservationWrapper):
@@ -126,23 +128,23 @@ class PixelFormatChwWrapper(ObservationWrapper):
 
 def make_iglu(*args, **kwargs):
     custom_grid = make_plane(rand=True)
-    env = IgluFast(custom_grid, render=True)
+    env = IgluFast(custom_grid, render=False)
 
-    env = SelectAndPlace(env)
+   # env = SelectAndPlace(env)
 
-    env = VisualObservationWrapper(env, True)
+    env = VectorObservationWrapper(env)
 
-    env = CompleteReward(env)
+    #env = CompleteReward(env)
     env = TimeLimit(env, limit=500)
-    env = Closeness(env)
+   # env = Closeness(env)
     env = CompleteScold(env)
     # env = SweeperReward(env)
 
-    env = PixelFormatChwWrapper(env)
+   # env = PixelFormatChwWrapper(env)
     # print(env.action_space.no_op())
-    # env = Discretization(env, flat_action_space('human-level'))
+  #  env = DiscretizationTuple(env)
     # 7, 8, 9, 10
-    env = RandomRotation(env)
+  #  env = RandomRotation(env)
     env = RandomTarget(env)
     # env = PovToObs(env)
 

@@ -298,7 +298,7 @@ class SelectAndPlace(ActionsWrapper):
               'forward': 0,
                 'back': 1,
               'left': 2,
-        #       'right': 3,
+               'right': 3,
               'jump': 4,
                'attack': 5,
               'use': 6,
@@ -307,11 +307,11 @@ class SelectAndPlace(ActionsWrapper):
           }
         #  print(action)
         #  print(mapping)
-        if action[mapping['hotbar']] != 0:
+        if action >= 8:
             yield action
             action = [0, 0, 0, 0, 0, 0, 0, 0, 0]
             action[mapping['use']] = 1
-        if action[mapping['use']] == 1 or action[mapping['attack']] == 1:
+        if action == 6 or action == 7 :
             for _ in range(3):
                 yield action
             action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -449,6 +449,39 @@ def flat_discrete(env, camera_delta=5):
         dummy['hotbar'] = i + 1
         discretes.append(dummy)
     return discretes
+
+class DiscretizationTuple(ActionsWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+
+        self.action_space = gym.spaces.Discrete(16)
+        self.old_action_space = env.action_space
+        self.last_action = None
+        self.inv_mapping = ['forward', 'back', 'left', 'right', 'jump', 'attack', 'use'] \
+                           + ['camera'] * 4 + ['hotbar'] * 6
+        self.mapping = {
+            'forward': 0,
+            'back': 1,
+            'left': 2,
+            'right': 3,
+            'jump': 4,
+            'attack': 5,
+            'use': 6,
+            'camera': 7,
+            'hotbar': 8,
+        }
+
+    def wrap_action(self, action=None, raw_action=None):
+
+        if action is not None:
+            try:
+                 action = self.mapping[np.where(np.array(action)!=0)[0][0]]
+                 action = self.inv_mapping.index(action)
+            except:
+                action = 0
+        elif raw_action is not None:
+            action = raw_action
+        yield action
 
 
 class Discretization(ActionsWrapper):
@@ -778,7 +811,7 @@ class VectorObservationWrapper(ObsWrapper):
         super().__init__(env)
         self.observation_space = gym.spaces.Dict({
             'agentPos': gym.spaces.Box(low=-5000.0, high=5000.0, shape=(5,)),
-            'grid': gym.spaces.Box(low=0.0, high=6.0, shape=(9, 11, 11)),
+           # 'grid': gym.spaces.Box(low=0.0, high=6.0, shape=(9, 11, 11)),
             'inventory': gym.spaces.Box(low=0.0, high=20.0, shape=(6,)),
             'target_grid': gym.spaces.Box(low=0.0, high=6.0, shape=(9, 11, 11))
         })
@@ -800,18 +833,18 @@ class VectorObservationWrapper(ObsWrapper):
         if info is not None:
             if 'target_grid' in info:
                 target_grid = info['target_grid']
-                del info['target_grid']
+               # del info['target_grid']
             else:
                 logger.error(f'info: {info}')
                 if hasattr(self.unwrapped, 'should_reset'):
                     self.unwrapped.should_reset(True)
-                target_grid = self.env.unwrapped.tasks.current.target_grid
+                target_grid = self.env.task.target_grid
         else:
-            target_grid = self.env.unwrapped.tasks.current.target_grid
+            target_grid = self.env.task.target_grid
         return {
             'agentPos': obs['agentPos'],
             'inventory': obs['inventory'],
-            'grid': obs['grid'],
+       #     'grid': obs['grid'],
             'target_grid': target_grid
         }
 
