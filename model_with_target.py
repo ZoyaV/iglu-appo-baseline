@@ -54,8 +54,8 @@ class ResnetEncoderWithTarget(EncoderBase):
     def __init__(self, cfg, obs_space, timing):
         super().__init__(cfg, timing)
         #raise Exception(obs_space)
-        obs_shape = get_obs_shape(obs_space['obs'])
-        input_ch = obs_shape.obs[0]
+      #  obs_shape = get_obs_shape(obs_space['obs'])
+      #  input_ch = obs_shape.obs[0]
 
         target_shape = get_obs_shape(obs_space['target_grid'])
         input_ch_targ = target_shape.obs[0]
@@ -66,21 +66,21 @@ class ResnetEncoderWithTarget(EncoderBase):
        # target_conf = [[16, 2], [32, 2], [32, 2]]
 
 
-        curr_input_channels = input_ch
+        #curr_input_channels = input_ch
         layers = []
         layers_target = []
 
         ### OBS embedding
-        for i, (out_channels, res_blocks) in enumerate(resnet_conf):
-            layers.extend([
-                nn.Conv2d(curr_input_channels, out_channels, kernel_size=3, stride=1, padding=1),  # padding SAME
-                nn.MaxPool2d(kernel_size=3, stride=2, padding=1),  # padding SAME
-            ])
-            for j in range(res_blocks):
-                layers.append(ResBlock(cfg, out_channels, out_channels, self.timing))
-            curr_input_channels = out_channels
-        layers.append(nonlinearity(cfg))
-        self.conv_head = nn.Sequential(*layers)
+       # for i, (out_channels, res_blocks) in enumerate(resnet_conf):
+      #      layers.extend([
+      #          nn.Conv2d(curr_input_channels, out_channels, kernel_size=3, stride=1, padding=1),  # padding SAME
+      #          nn.MaxPool2d(kernel_size=3, stride=2, padding=1),  # padding SAME
+       #     ])
+       #     for j in range(res_blocks):
+      #          layers.append(ResBlock(cfg, out_channels, out_channels, self.timing))
+      #      curr_input_channels = out_channels
+     #   layers.append(nonlinearity(cfg))
+     #   self.conv_head = nn.Sequential(*layers)
 
         ### Target embedding
         kernel = 3
@@ -101,17 +101,17 @@ class ResnetEncoderWithTarget(EncoderBase):
             nn.ReLU(),
         )
 
-        self.conv_head_out_size = calc_num_elements(self.conv_head, obs_shape.obs)
+
         self.conv_target_out_size = calc_num_elements(self.conv_target, target_shape.obs)
-        self.init_fc_blocks(self.conv_head_out_size + self.conv_target_out_size+ inv_emded_size)
+        self.init_fc_blocks(self.conv_target_out_size+  inv_emded_size)
 
     #   self.init_fc_blocks(self.conv_head_out_size)
 
     def forward(self, obs_dict):
 
 
-        x = self.conv_head(obs_dict['obs'])
-        x = x.contiguous().view(-1, self.conv_head_out_size)
+       # x = self.conv_head(obs_dict['obs'])
+      #  x = x.contiguous().view(-1, self.conv_head_out_size)
 
         suma = torch.from_numpy(np.array([10,8,10,360,180])).cuda()
         inventory_compass = torch.cat([obs_dict['inventory']/20, (obs_dict['agentPos']+suma)/suma], -1)
@@ -120,7 +120,7 @@ class ResnetEncoderWithTarget(EncoderBase):
         tg = self.conv_target(obs_dict['target_grid']/6)
         tg_embed = tg.contiguous().view(-1, self.conv_target_out_size)
 
-        head_input = torch.cat([x, inv_comp_emb, tg_embed], -1)
+        head_input = torch.cat([ inv_comp_emb, tg_embed], -1)
 
         x = self.forward_fc_blocks(head_input)
         return x
