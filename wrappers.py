@@ -16,6 +16,7 @@ from minerl_patched.herobraine.hero import spaces
 from custom_tasks import make_3d_cube, make_plane
 import matplotlib.pyplot as plt
 import cv2
+from collections import OrderedDict
 #from iglu.tasks import RandomTasks
 
 logger = logging.getLogger(__file__)
@@ -364,32 +365,36 @@ def flat_action_space(action_space):
     if action_space == 'discrete':
         return flat_discrete
 
+def no_op():
+    return OrderedDict([('attack', 0), ('back', 0), ('camera', np.array([0., 0.])),
+                        ('forward', 0), ('hotbar', 0), ('jump', 0), ('left', 0), ('right', 0),
+                        ('use', 0)])
 
 def flat_human_level(env, camera_delta=5):
     print(help(env.action_space))
     binary = ['attack', 'forward', 'back', 'left', 'right', 'jump']
-    discretes = [env.action_space.no_op()]
+    discretes = [no_op()]
     for op in binary:
-        dummy = env.action_space.no_op()
+        dummy = no_op()
         dummy[op] = 1
         discretes.append(dummy)
-    camera_x = env.action_space.no_op()
+    camera_x = no_op()
     camera_x['camera'][0] = camera_delta
     discretes.append(camera_x)
-    camera_x = env.action_space.no_op()
+    camera_x = no_op()
     camera_x['camera'][0] = -camera_delta
     discretes.append(camera_x)
-    camera_y = env.action_space.no_op()
+    camera_y = no_op()
     camera_y['camera'][1] = camera_delta
     discretes.append(camera_y)
-    camera_y = env.action_space.no_op()
+    camera_y = no_op()
     camera_y['camera'][1] = -camera_delta
     discretes.append(camera_y)
     for i in range(6):
-        dummy = env.action_space.no_op()
+        dummy = no_op()
         dummy['hotbar'] = i + 1
         discretes.append(dummy)
-    discretes.append(env.action_space.no_op())
+    discretes.append(no_op())
     return discretes
 
 
@@ -488,7 +493,7 @@ class Discretization(ActionsWrapper):
     def __init__(self, env, flatten):
         super().__init__(env)
         camera_delta = 5
-        print(env.action_space.no_op)
+      #  print(env.action_space.no_op)
         self.discretes = flatten(env, camera_delta)
         self.action_space = gym.spaces.Discrete(len(self.discretes))
         self.old_action_space = env.action_space
@@ -496,6 +501,7 @@ class Discretization(ActionsWrapper):
 
     def wrap_action(self, action=None, raw_action=None):
         if action is not None:
+            raise Exception(action)
             action = self.discretes[action]
         elif raw_action is not None:
             action = raw_action

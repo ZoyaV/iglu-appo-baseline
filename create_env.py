@@ -128,7 +128,7 @@ class PixelFormatChwWrapper(ObservationWrapper):
 
 def make_iglu(*args, **kwargs):
     custom_grid = make_plane(rand=True)
-    env = IgluFast(custom_grid, render=False)
+    env = GridWorld(custom_grid, render=False)
 
    # env = SelectAndPlace(env)
 
@@ -142,7 +142,8 @@ def make_iglu(*args, **kwargs):
 
    # env = PixelFormatChwWrapper(env)
     # print(env.action_space.no_op())
-    env = DiscretizationTuple(env)
+    env = Discretization(env, flatten=flat_action_space("human-level"))
+    #env = DiscretizationTuple(env)
     # 7, 8, 9, 10
     env = RandomRotation(env)
    # env = RandomTarget(env)
