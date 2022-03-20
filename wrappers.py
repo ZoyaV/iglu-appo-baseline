@@ -76,8 +76,11 @@ class ObsWrapper(Wrapper):
     def step(self, action):
         obs, reward, done, info = super().step(action)
         #  print(done)
+
+     #   print(obs)
         info['grid'] = obs['grid']
         info['agentPos'] = obs['agentPos']
+        info['obs'] = obs['obs']
         return self.observation(obs, reward, done, info), reward, done, info
 
 
@@ -256,6 +259,26 @@ class Closeness(Wrapper):
         return obs, reward, done, info
 
 
+class ClosenessTL(Closeness):
+    def __init__(self, env):
+        super().__init__(env)
+        self.max_steps = 128
+        self.steps = 0
+
+    def reset(self):
+        self.steps = 0
+        return super().reset()
+
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        self.steps += 1
+        if self.steps >= self.max_steps:
+            reward = -self.closeness(info)
+            done = True
+        else:
+            reward = 0
+        return obs, reward/16, done, info
+
 class CompleteScold(Wrapper):
     def __init__(self, env):
         super().__init__(env)
@@ -324,40 +347,78 @@ class RandomRotation(Wrapper):
         super().__init__(env)
         self.steps = 0
         self.vec = np.random.choice([1, -1])
-        self.total_rots = np.random.choice([0, 18, 36, 54])
+        self.total_rots = np.random.choice(list(range(0,72,5)))
 
     def reset(self):
         self.steps = 0
         self.vec = np.random.choice([1, -1])
-        self.total_rots = np.random.choice([0, 18, 36, 54])
+        self.total_rots = np.random.choice(list(range(0,72,5)))
         return super().reset()
 
     def step(self, action):
-        mapping = {
-            'forward': 0,
-            'back': 1,
-            'left': 2,
-            'right': 3,
-            'jump': 4,
-            'attack': 5,
-            'use': 6,
-            'camera': 7,
-            'hotbar': 8,
-        }
-        action = [0,0,0,0,0,0,0,0,0]
+        #         mapping = {
+        #             'forward': 0,
+        #             'back': 1,
+        #             'left': 2,
+        #             'right': 3,
+        #             'jump': 4,
+        #             'attack': 5,
+        #             'use': 6,
+        #             'camera': 7,
+        #             'hotbar': 8,
+        #         }
+        # action = [0,0,0,0,0,0,0,0,0]
         self.steps += 1
         if self.steps <= self.total_rots:
             # vec = np.random.choice([1,-1])
             if self.vec == 1:
-                action[mapping['camera']]=1
-                obs, reward, done, info = super().step(action)
+                # action[mapping['camera']]=1
+                obs, reward, done, info = super().step(9)
             else:
-                action[mapping['camera']]=0
-                obs, reward, done, info = super().step(action)
+                #  action[mapping['camera']]=0
+                obs, reward, done, info = super().step(10)
         else:
             obs, reward, done, info = super().step(action)
         return obs, reward, done, info
 
+class RandomRotation(Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.steps = 0
+        self.vec = np.random.choice([1, -1])
+        self.total_rots = np.random.choice(list(range(0,71,5)))
+
+    def reset(self):
+        self.steps = 0
+        self.vec = np.random.choice([1, -1])
+        self.total_rots = np.random.choice(list(range(0,71,5)))
+        return super().reset()
+
+    def step(self, action):
+        #         mapping = {
+        #             'forward': 0,
+        #             'back': 1,
+        #             'left': 2,
+        #             'right': 3,
+        #             'jump': 4,
+        #             'attack': 5,
+        #             'use': 6,
+        #             'camera': 7,
+        #             'hotbar': 8,
+        #         }
+        # action = [0,0,0,0,0,0,0,0,0]
+        self.steps += 1
+        if self.steps <= self.total_rots:
+            # vec = np.random.choice([1,-1])
+            if self.vec == 1:
+                # action[mapping['camera']]=1
+                obs, reward, done, info = super().step(7)
+            else:
+                #  action[mapping['camera']]=0
+                obs, reward, done, info = super().step(8)
+        else:
+            obs, reward, done, info = super().step(action)
+        return obs, reward, done, info
 
 def flat_action_space(action_space):
     if action_space == 'human-level':
@@ -371,7 +432,7 @@ def no_op():
                         ('use', 0)])
 
 def flat_human_level(env, camera_delta=5):
-    print(help(env.action_space))
+  #  print(help(env.action_space))
     binary = ['attack', 'forward', 'back', 'left', 'right', 'jump']
     discretes = [no_op()]
     for op in binary:
@@ -501,7 +562,7 @@ class Discretization(ActionsWrapper):
 
     def wrap_action(self, action=None, raw_action=None):
         if action is not None:
-            raise Exception(action)
+           # raise Exception(action)
             action = self.discretes[action]
         elif raw_action is not None:
             action = raw_action
@@ -697,9 +758,14 @@ class VideoLogger(Wrapper):
         #                 new_action[key] = new_action[key].tolist()
         obs, reward, done, info = super().step(action)
         self.actions.append(action)
-        image = np.transpose(obs['obs'], (1, 2, 0))
+        if 'obs' in obs:
+            image = np.transpose(obs['obs'], (1, 2, 0))
+        elif 'obs' in info:
+           # print(info['obs'])
+            #image = np.transpose(info['obs'], (1, 2, 0))
+            image = info['obs']*255
         # print(image.shape)
-        self.out.write(image[:, :, ::-1].astype(np.uint8))
+        self.out.write(image.astype(np.uint8))
         self.obs.append({k: v for k, v in obs.items() if k != 'obs'})
         self.obs[-1]['reward'] = reward
         self.running_reward += reward
@@ -721,9 +787,8 @@ class Logger(Wrapper):
 
     def flush(self):
         if self.filename is not None:
-            with open(f'{self.filename}-r{self.running_reward}.json', 'w') as f:
-                json.dump(self.actions, f)
-            self.out.release()
+            with open(f'{self.filename}-act.pkl', 'wb') as f:
+                pickle.dump(self.actions, f)
             with open(f'{self.filename}-obs.pkl', 'wb') as f:
                 pickle.dump(self.obs, f)
             self.obs = []
@@ -736,8 +801,8 @@ class Logger(Wrapper):
         self.actions = []
         self.frames = []
         self.obs = []
-        self.out = cv2.VideoWriter(f'{self.filename}.mp4', cv2.VideoWriter_fourcc(*'mp4v'),
-                                   20, (64, 64))
+     #   self.out = cv2.VideoWriter(f'{self.filename}.mp4', cv2.VideoWriter_fourcc(*'mp4v'),
+         #                          20, (64, 64))
 
     def reset(self):
         if not self.flushed:
@@ -753,13 +818,10 @@ class Logger(Wrapper):
         # assuming dict
         self.flushed = False
         new_action = {}
-        for key in action:
-            new_action[key] = action[key]
-            if isinstance(new_action[key], np.ndarray):
-                new_action[key] = new_action[key].tolist()
+
         obs, reward, done, info = super().step(action)
-        self.actions.append(new_action)
-        self.out.write(obs['pov'][..., ::-1])
+        self.actions.append(action)
+       # self.out.write(obs['pov'][..., ::-1])
         self.obs.append({k: v for k, v in obs.items() if k != 'pov'})
         self.obs[-1]['reward'] = reward
         self.running_reward += reward
@@ -800,7 +862,7 @@ class VisualObservationWrapper(ObsWrapper):
              target_grid = self.env.task.target_grid
             #target_grid = self.env.unwrapped.tasks.current.target_grid
             # target_grid = info['target_grid']
-        print(obs)
+       # print(obs)
         observe = {
             'obs': obs['obs'].astype(np.float32),
             'inventory': obs['inventory'],

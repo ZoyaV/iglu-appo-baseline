@@ -21,6 +21,7 @@ from wrappers import \
     CompleteReward, \
     CompleteScold, \
     Closeness, \
+    ClosenessTL, \
     SweeperReward, \
     RandomTarget, \
     VideoLogger, \
@@ -134,25 +135,21 @@ def make_iglu(*args, **kwargs):
 
     env = VectorObservationWrapper(env)
 
-    #env = CompleteReward(env)
-    env = TimeLimit(env, limit=500)
-    env = Closeness(env)
-    env = CompleteScold(env)
+    # env = CompleteReward(env)
+    env = TimeLimit(env, limit=1000)
+    env = ClosenessTL(env)
+    # env = CompleteScold(env)
     # env = SweeperReward(env)
 
-   # env = PixelFormatChwWrapper(env)
-    # print(env.action_space.no_op())
-    env = Discretization(env, flatten=flat_action_space("human-level"))
-    #env = DiscretizationTuple(env)
-    # 7, 8, 9, 10
+    env = Discretization(env, flat_action_space('human-level'))
     env = RandomRotation(env)
-   # env = RandomTarget(env)
-    # env = PovToObs(env)
+    #  env = RandomTarget(env)
 
     num_workers, envs_per_worker = 1, 1
     env.reward_range = (-float('inf'), float('inf'))
     env.num_agents = num_workers * envs_per_worker
     env.is_multiagent = False
+
     return env
 
 
