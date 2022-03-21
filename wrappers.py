@@ -80,7 +80,7 @@ class ObsWrapper(Wrapper):
      #   print(obs)
         info['grid'] = obs['grid']
         info['agentPos'] = obs['agentPos']
-        info['obs'] = obs['obs']
+        #info['obs'] = obs['obs']
         return self.observation(obs, reward, done, info), reward, done, info
 
 
@@ -138,7 +138,7 @@ class SweeperReward(Wrapper):
 
 class RandomTarget(gym.Wrapper):
     # current_env  = [[None]]
-    def __init__(self, env, thresh=0.07):
+    def __init__(self, env, thresh=0.1):
         super().__init__(env)
         self.thresh = thresh
         self.total_reward = 0
@@ -149,7 +149,6 @@ class RandomTarget(gym.Wrapper):
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
         if done:
-            self.start_position = (0.5, 227, 0.5, 0.0, np.random.choice([0, 90, -90]))
             self.count += 1
             self.sum += reward
             self.total_reward = self.sum / self.count
@@ -171,14 +170,46 @@ class RandomTarget(gym.Wrapper):
                 #            num_colors= 1,
                 #            max_cache=10,
                 #         )
-                task = make_plane(rand=True)
-                self.update_taskset(task)
+                task = make_3d_cube(rand=True)
+                self.env.task = task
                 self.sum = self.thresh / 10
                 self.count = 0
                 self.total_reward = self.thresh / 10
                 info['new_env'] = True
         return obs, reward, done, info
 
+class RangetReward (Wrapper):
+
+    def __init__(self, env, rspec = 15):
+        super().__init__(env)
+        self.rspec = rspec
+
+    def calc_reward(self, dist):
+        IN = np.array(range(0, self.rspec))
+        IN_ = IN * 2 + 0.4
+        reward_range = np.arctan(-(IN_)) + np.arctan(IN_[8])
+       # raise Exception(reward_range)
+        return reward_range[int(dist)]
+
+    def blocks_count(self, info):
+        return np.sum(info['grid'] != 0)
+
+    def check_goal_closeness(self, info):
+        roi = np.where(info['target_grid'] != 0)  # y x z
+        goal = np.mean(roi[1]), np.mean(roi[2])
+        broi = np.where(info['grid'] != 0)  # y x z
+        builds = np.mean(broi[1]), np.mean(broi[2])
+        dist = ((goal[0] - builds[0]) ** 2 + (goal[1] - builds[1]) ** 2) ** 0.5
+        return self.calc_reward(dist)
+
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        reward = 0
+        if self.blocks_count(info) == 1:
+            reward = self.check_goal_closeness(info)
+           # raise Exception(reward)
+            done = True
+        return obs, reward, done, info
 
 class CompleteReward(Wrapper):
     def __init__(self, env, spec="hardany", hard_reset=False):
@@ -316,31 +347,31 @@ class SizeReward(Wrapper):
         return obs, reward, done, info
 
 
+
 class SelectAndPlace(ActionsWrapper):
     def wrap_action(self, action):
-        mapping = {
-              'forward': 0,
-                'back': 1,
-              'left': 2,
-               'right': 3,
-              'jump': 4,
-               'attack': 5,
-              'use': 6,
-               'camera': 7,
-              'hotbar': 8,
-          }
+        # mapping = {
+        #       'forward': 0,
+        #         'back': 1,
+        #       'left': 2,
+        ##       'right': 3,
+        #       'jump': 4,
+        #        'attack': 5,
+        #       'use': 6,
+        #        'camera': 7,
+        #       'hotbar': 8,
+        #   }
         #  print(action)
         #  print(mapping)
-        if action >= 8:
+        if action['hotbar'] != 0:
             yield action
-            action = [0, 0, 0, 0, 0, 0, 0, 0, 0]
-            action[mapping['use']] = 1
-        if action == 6 or action == 7 :
+            # action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+            action['use'] = 1
+        if action['use'] == 1 or action['attack'] == 1:
             for _ in range(3):
                 yield action
-            action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+            # action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
         yield action
-
 
 class RandomRotation(Wrapper):
     def __init__(self, env):

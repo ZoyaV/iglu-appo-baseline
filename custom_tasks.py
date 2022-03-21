@@ -17,10 +17,7 @@ def make_3d_cube(rand=False):
     print("\n CHANGE TASK \n", x, y, z)
     print(z, x, y)
     custom_grid[z, x, y] = 1  # blue color
-    return CustomTasks([
-        ('<Architect> Please, build a stack of three blue blocks somewhere.\n'
-         '<Builder> Sure.',
-         custom_grid)])
+    return custom_grid
 
 
 def make_plane(rand=False, size=0.35, rand_conf=1 / 4):
