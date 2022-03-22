@@ -80,7 +80,7 @@ class ObsWrapper(Wrapper):
      #   print(obs)
         info['grid'] = obs['grid']
         info['agentPos'] = obs['agentPos']
-        info['obs'] = obs['obs']
+      #  info['obs'] = obs['obs']
         return self.observation(obs, reward, done, info), reward, done, info
 
 
@@ -366,6 +366,7 @@ class SelectAndPlace(ActionsWrapper):
         if action['hotbar'] != 0:
             yield action
             # action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
+
             action['use'] = 1
         if action['use'] == 1 or action['attack'] == 1:
             for _ in range(3):
@@ -389,30 +390,31 @@ class RandomRotation(Wrapper):
         return super().reset()
 
     def step(self, action):
-        #         mapping = {
-        #             'forward': 0,
-        #             'back': 1,
-        #             'left': 2,
-        #             'right': 3,
-        #             'jump': 4,
-        #             'attack': 5,
-        #             'use': 6,
-        #             'camera': 7,
-        #             'hotbar': 8,
-        #         }
-        # action = [0,0,0,0,0,0,0,0,0]
-        self.steps += 1
-        if self.steps <= self.total_rots:
-            # vec = np.random.choice([1,-1])
-            if self.vec == 1:
-                # action[mapping['camera']]=1
-                obs, reward, done, info = super().step(7)
-            else:
-                #  action[mapping['camera']]=0
-                obs, reward, done, info = super().step(8)
-        else:
             obs, reward, done, info = super().step(action)
-        return obs, reward, done, info
+            #         mapping = {
+            #             'forward': 0,
+            #             'back': 1,
+            #             'left': 2,
+            #             'right': 3,
+            #             'jump': 4,
+            #             'attack': 5,
+            #             'use': 6,
+            #             'camera': 7,
+            #             'hotbar': 8,
+            #         }
+            # action = [0,0,0,0,0,0,0,0,0]
+            #         self.steps += 1
+            #         if self.steps <= self.total_rots:
+            #             # vec = np.random.choice([1,-1])
+            #             if self.vec == 1:
+            #                 # action[mapping['camera']]=1
+            #                 obs, reward, done, info = super().step(9)
+            #             else:
+            #                 #  action[mapping['camera']]=0
+            #                 obs, reward, done, info = super().step(10)
+            #         else:
+            #             obs, reward, done, info = super().step(action)
+            return obs, reward, done, info
 
 
 def flat_action_space(action_space):
