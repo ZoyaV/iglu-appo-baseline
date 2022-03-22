@@ -15,10 +15,10 @@ from typing import Generator
 from minerl_patched.herobraine.hero import spaces
 from custom_tasks import make_3d_cube, make_plane
 import matplotlib.pyplot as plt
+from sample_factory.envs.env_wrappers import ObservationWrapper, has_image_observations
 import cv2
 from collections import OrderedDict
 from gridworld.task import Task
-#from iglu.tasks import RandomTasks
 
 logger = logging.getLogger(__file__)
 IGLU_ENABLE_LOG = os.environ.get('IGLU_ENABLE_LOG', '')
@@ -76,9 +76,6 @@ class ObsWrapper(Wrapper):
 
     def step(self, action):
         obs, reward, done, info = super().step(action)
-        #  print(done)
-
-     #   print(obs)
         info['grid'] = obs['grid']
         info['agentPos'] = obs['agentPos']
       #  info['obs'] = obs['obs']
@@ -122,10 +119,8 @@ class SweeperReward(Wrapper):
     def calc_reward(self, info):
         garbage = self.garbage(info)
         if garbage > self.last_step_garbage:
-            # self.last_step_garbage_max = garbage
             return -0.001
         elif garbage < self.last_step_garbage:
-            # self.last_step_garbage_min = garbage
             return 0.001
         self.last_step_garbage = garbage
         return 0
@@ -138,50 +133,41 @@ class SweeperReward(Wrapper):
 
 
 class RandomTarget(gym.Wrapper):
-    # current_env  = [[None]]
-    def __init__(self, env, thresh=0.1):
+    def __init__(self, env, random_type = 1, thresh=0.1):
         super().__init__(env)
         self.thresh = thresh
         self.total_reward = 0
         self.sum = self.thresh / 10
         self.count = 0
+        self.random_type = random_type
         self.changes = 0
+
+    def reset(self):
+        if self.random_type == 1:
+            task = make_3d_cube(rand=True)
+            self.env.task = Task("", task)
+        return super().reset()
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
-        if done:
-            self.count += 1
-            self.sum += reward
-            self.total_reward = self.sum / self.count
-            # print("\n --- upd reward ---- \n")
-            # print("blocks count = ", len(np.where(info['grid']!=0)[0]))
-            # print("reward = ",self.total_reward)
-            # print("sum = ", self.sum)
-            # print("count = ", self.count)
-            # print(" --- upd reward ---- \n")
-
-            if (self.total_reward > self.thresh):
-                # print("\n ----Make new Goal ----- \n")
-                self.changes += 1
-                # task = RandomTasks(
-                #            max_blocks=1,
-                #            height_levels=1,
-                #            allow_float= False,
-                #            max_dist= 1,
-                #            num_colors= 1,
-                #            max_cache=10,
-                #         )
-                task = make_3d_cube(rand=True)
-                self.env.task = task
-                self.sum = self.thresh / 10
-                self.count = 0
-                self.total_reward = self.thresh / 10
-                info['new_env'] = True
+        if self.random_type == 0:
+            if done:
+                self.count += 1
+                self.sum += reward
+                self.total_reward = self.sum / self.count
+                if (self.total_reward > self.thresh):
+                    self.changes += 1
+                    task = make_3d_cube(rand=True)
+                    self.env.task = task
+                    self.sum = self.thresh / 10
+                    self.count = 0
+                    self.total_reward = self.thresh / 10
+                    info['new_env'] = True
         return obs, reward, done, info
 
-class RangetReward (Wrapper):
 
-    def __init__(self, env, rspec = 15):
+class RangetReward (Wrapper):
+    def __init__(self, env, rspec=15):
         super().__init__(env)
         self.rspec = rspec
 
@@ -189,7 +175,6 @@ class RangetReward (Wrapper):
         IN = np.array(range(0, self.rspec))
         IN_ = IN * 2 + 0.4
         reward_range = np.arctan(-(IN_)) + np.arctan(IN_[8])
-       # raise Exception(reward_range)
         return reward_range[int(dist)]
 
     def blocks_count(self, info):
@@ -208,9 +193,9 @@ class RangetReward (Wrapper):
         reward = 0
         if self.blocks_count(info) == 1:
             reward = self.check_goal_closeness(info)
-           # raise Exception(reward)
             done = True
         return obs, reward, done, info
+
 
 class CompleteReward(Wrapper):
     def __init__(self, env, spec="hardany", hard_reset=False):
@@ -230,7 +215,7 @@ class CompleteReward(Wrapper):
         roi = info['grid'][info['target_grid'] != 0]
         build_size = len(np.where(roi != 0)[0])
         if self.T == "all":
-            return len(np.where(roi == 0)[0]) == 0, build_size  # TODO: fix roi == 0  to != 0
+            return len(np.where(roi == 0)[0]) == 0, build_size
         elif self.T == "any":
             return len(np.where(roi != 0)[0]) > 0, build_size
         elif self.T == "hardany":
@@ -264,7 +249,6 @@ class Closeness(Wrapper):
         return super().reset()
 
     def closeness(self, info):
-
         roi = np.where(info['target_grid'] != 0)  # y x z
         goal = np.mean(roi[1]), np.mean(roi[2])
         agent = info['agentPos'][:3]
@@ -311,6 +295,7 @@ class ClosenessTL(Closeness):
             reward = 0
         return obs, reward/16, done, info
 
+
 class CompleteScold(Wrapper):
     def __init__(self, env):
         super().__init__(env)
@@ -348,32 +333,16 @@ class SizeReward(Wrapper):
         return obs, reward, done, info
 
 
-
 class SelectAndPlace(ActionsWrapper):
     def wrap_action(self, action):
-        # mapping = {
-        #       'forward': 0,
-        #         'back': 1,
-        #       'left': 2,
-        ##       'right': 3,
-        #       'jump': 4,
-        #        'attack': 5,
-        #       'use': 6,
-        #        'camera': 7,
-        #       'hotbar': 8,
-        #   }
-        #  print(action)
-        #  print(mapping)
         if action['hotbar'] != 0:
             yield action
-            # action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
-
             action['use'] = 1
         if action['use'] == 1 or action['attack'] == 1:
             for _ in range(3):
                 yield action
-            # action = (0, 0, 0, 0, 0, 0, 0, 0, 0)
         yield action
+
 
 class RandomRotation(Wrapper):
     def __init__(self, env):
@@ -386,38 +355,19 @@ class RandomRotation(Wrapper):
         self.steps = 0
         self.vec = np.random.choice([1, -1])
         self.total_rots = np.random.choice(list(range(0,72,5)))
-        task = make_3d_cube(rand=True)
-        self.task = Task("", task)
-        print(np.where(self.task.target_grid!=0))
-      #  self.env.task = Task('',task)
         return super().reset()
 
     def step(self, action):
-            obs, reward, done, info = super().step(action)
-            #         mapping = {
-            #             'forward': 0,
-            #             'back': 1,
-            #             'left': 2,
-            #             'right': 3,
-            #             'jump': 4,
-            #             'attack': 5,
-            #             'use': 6,
-            #             'camera': 7,
-            #             'hotbar': 8,
-            #         }
-            # action = [0,0,0,0,0,0,0,0,0]
-            #         self.steps += 1
-            #         if self.steps <= self.total_rots:
-            #             # vec = np.random.choice([1,-1])
-            #             if self.vec == 1:
-            #                 # action[mapping['camera']]=1
-            #                 obs, reward, done, info = super().step(9)
-            #             else:
-            #                 #  action[mapping['camera']]=0
-            #                 obs, reward, done, info = super().step(10)
-            #         else:
-            #             obs, reward, done, info = super().step(action)
-            return obs, reward, done, info
+        self.steps += 1
+        if self.steps <= self.total_rots:
+            vec = np.random.choice([1,-1])
+            if self.vec == 1:
+                 obs, reward, done, info = super().step(7)
+            else:
+                 obs, reward, done, info = super().step(8)
+        else:
+             obs, reward, done, info = super().step(action)
+        return obs, reward, done, info
 
 
 def flat_action_space(action_space):
@@ -515,40 +465,6 @@ def flat_discrete(env, camera_delta=5):
         dummy['hotbar'] = i + 1
         discretes.append(dummy)
     return discretes
-
-class DiscretizationTuple(ActionsWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-
-        self.action_space = gym.spaces.Discrete(16)
-        self.old_action_space = env.action_space
-        self.last_action = None
-        self.inv_mapping = ['forward', 'back', 'left', 'right', 'jump', 'attack', 'use'] \
-                           + ['camera'] * 4 + ['hotbar'] * 6
-        self.mapping = {
-            'forward': 0,
-            'back': 1,
-            'left': 2,
-            'right': 3,
-            'jump': 4,
-            'attack': 5,
-            'use': 6,
-            'camera': 7,
-            'hotbar': 8,
-        }
-
-    def wrap_action(self, action=None, raw_action=None):
-
-        if action is not None:
-            try:
-                 action = self.mapping[np.where(np.array(action)!=0)[0][0]]
-                 action = self.inv_mapping.index(action)
-            except:
-                action = 0
-        elif raw_action is not None:
-            action = raw_action
-        yield action
-
 
 class Discretization(ActionsWrapper):
     def __init__(self, env, flatten):
@@ -720,8 +636,6 @@ class VideoLogger(Wrapper):
 
     def flush(self):
         if self.filename is not None:
-            # with open(f'{self.filename}-r{self.running_reward}.json', 'w') as f:
-            #  json.dump(self.actions, f)
             self.out.release()
             with open(f'{self.filename}-obs.pkl', 'wb') as f:
                 pickle.dump(self.obs, f)
@@ -751,11 +665,6 @@ class VideoLogger(Wrapper):
     def step(self, action):
         # assuming dict
         self.flushed = False
-        new_action = {}
-        #         for key in action:
-        #             new_action[key] = action[key]
-        #             if isinstance(new_action[key], np.ndarray):
-        #                 new_action[key] = new_action[key].tolist()
         obs, reward, done, info = super().step(action)
         self.actions.append(action)
         if 'obs' in obs:
@@ -801,8 +710,6 @@ class Logger(Wrapper):
         self.actions = []
         self.frames = []
         self.obs = []
-     #   self.out = cv2.VideoWriter(f'{self.filename}.mp4', cv2.VideoWriter_fourcc(*'mp4v'),
-         #                          20, (64, 64))
 
     def reset(self):
         if not self.flushed:
@@ -817,17 +724,12 @@ class Logger(Wrapper):
     def step(self, action):
         # assuming dict
         self.flushed = False
-        new_action = {}
-
         obs, reward, done, info = super().step(action)
         self.actions.append(action)
-       # self.out.write(obs['pov'][..., ::-1])
         self.obs.append({k: v for k, v in obs.items() if k != 'pov'})
         self.obs[-1]['reward'] = reward
         self.running_reward += reward
         return obs, reward, done, info
-
-
 
 class VisualObservationWrapper(ObsWrapper):
     def __init__(self, env, include_target=False):
@@ -855,14 +757,10 @@ class VisualObservationWrapper(ObsWrapper):
                 logger.error(f'info: {info}')
                 if hasattr(self.unwrapped, 'should_reset'):
                     self.unwrapped.should_reset(True)
-               # target_grid = self.env.unwrapped.tasks.current.target_grid
                 target_grid = self.env.task.target_grid
 
         else:
              target_grid = self.env.task.target_grid
-            #target_grid = self.env.unwrapped.tasks.current.target_grid
-            # target_grid = info['target_grid']
-       # print(obs)
         observe = {
             'obs': obs['obs'].astype(np.float32),
             'inventory': obs['inventory'],
@@ -900,7 +798,7 @@ class VectorObservationWrapper(ObsWrapper):
             )
         if info is not None:
             if 'target_grid' in info:
-                target_grid = self.env.task.target_grid#info['target_grid']
+                target_grid = self.env.task.target_grid #info['target_grid']
                # del info['target_grid']
             else:
                 logger.error(f'info: {info}')
@@ -925,3 +823,97 @@ class VectorObservationWrapper(ObsWrapper):
             logger.info(f'{name} is above level {hi}:')
             logger.info((arr > hi).nonzero())
             logger.info(arr[arr > hi])
+
+
+
+class MinerlOnlyObs(gym.ObservationWrapper):
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.observation_space = self.env.observation_space['pov']
+
+    def observation(self, observation):
+        return observation['pov']
+
+
+class PovToObs(gym.ObservationWrapper):
+
+    def __init__(self, env):
+        super().__init__(env)
+        new_obs_space = self.env.observation_space.spaces
+        new_obs_space['obs'] = new_obs_space.pop('pov')
+        self.observation_space = gym.spaces.Dict(new_obs_space)
+
+    def observation(self, observation):
+        new_obs = observation
+        new_obs['obs'] = new_obs.pop('pov')
+        return new_obs
+
+
+class ObsToOneDict(gym.ObservationWrapper):
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.observation_space = gym.spaces.Dict({'obs': gym.spaces.Dict(self.env.observation_space.spaces)})
+
+    def observation(self, observation):
+        return {'obs': observation}
+
+
+class PixelFormatChwWrapper(ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+
+        if isinstance(env.observation_space, gym.spaces.Dict):
+            #   raise Exception(env.observation_space.spaces)
+            img_obs_space = env.observation_space['obs']
+            self.dict_obs_space = True
+        else:
+            img_obs_space = env.observation_space
+            self.dict_obs_space = False
+
+        if not has_image_observations(img_obs_space):
+            raise Exception('Pixel format wrapper only works with image-based envs')
+
+        obs_shape = img_obs_space.shape
+        max_num_img_channels = 4
+
+        if len(obs_shape) <= 2:
+            raise Exception('Env obs do not have channel dimension?')
+
+        if obs_shape[0] <= max_num_img_channels:
+            raise Exception('Env obs already in CHW format?')
+
+        h, w, c = obs_shape
+        low, high = img_obs_space.low.flat[0], img_obs_space.high.flat[0]
+        new_shape = [c, h, w]
+
+        if self.dict_obs_space:
+            dtype = env.observation_space.spaces['obs'].dtype if env.observation_space.spaces[
+                                                                     'obs'].dtype is not None else np.float32
+        else:
+            dtype = env.observation_space.dtype if env.observation_space.dtype is not None else np.float32
+
+        new_img_obs_space = spaces.Box(low, high, shape=new_shape, dtype=dtype)
+
+        if self.dict_obs_space:
+            self.observation_space = env.observation_space
+            self.observation_space.spaces['obs'] = new_img_obs_space
+        else:
+            self.observation_space = new_img_obs_space
+
+        self.action_space = env.action_space
+
+    @staticmethod
+    def _transpose(obs):
+        return np.transpose(obs, (2, 0, 1))  # HWC to CHW for PyTorch
+
+    def observation(self, observation):
+        if observation is None:
+            return observation
+
+        if self.dict_obs_space:
+            observation['pov'] = self._transpose(observation['pov'])
+        else:
+            observation = self._transpose(observation)
+        return observation
