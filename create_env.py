@@ -41,18 +41,16 @@ def make_iglu(*args, **kwargs):
     env = RandomTarget(env)
     env = VectorObservationWrapper(env)
 
-    env = TimeLimit(env, limit=750)
+    #env = TimeLimit(env, limit=750)
     env = RangetReward(env)
 
     env = Discretization(env, flat_action_space('human-level'))
     #env = RandomRotation(env)
 
-
     num_workers, envs_per_worker = 1, 1
     env.reward_range = (-float('inf'), float('inf'))
     env.num_agents = num_workers * envs_per_worker
     env.is_multiagent = False
-
     return env
 
 
