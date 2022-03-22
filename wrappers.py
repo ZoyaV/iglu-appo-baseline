@@ -17,6 +17,7 @@ from custom_tasks import make_3d_cube, make_plane
 import matplotlib.pyplot as plt
 import cv2
 from collections import OrderedDict
+from gridworld.task import Task
 #from iglu.tasks import RandomTasks
 
 logger = logging.getLogger(__file__)
@@ -386,7 +387,9 @@ class RandomRotation(Wrapper):
         self.vec = np.random.choice([1, -1])
         self.total_rots = np.random.choice(list(range(0,72,5)))
         task = make_3d_cube(rand=True)
-        self.env.task = task
+        self.task = Task("", task)
+        print(np.where(self.task.target_grid!=0))
+      #  self.env.task = Task('',task)
         return super().reset()
 
     def step(self, action):
@@ -897,7 +900,7 @@ class VectorObservationWrapper(ObsWrapper):
             )
         if info is not None:
             if 'target_grid' in info:
-                target_grid = info['target_grid']
+                target_grid = self.env.task.target_grid#info['target_grid']
                # del info['target_grid']
             else:
                 logger.error(f'info: {info}')
