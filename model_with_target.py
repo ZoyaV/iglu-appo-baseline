@@ -62,7 +62,7 @@ class ResnetEncoderWithTarget(EncoderBase):
 
         inv_emded_size = 64
         resnet_conf = [[32, 2], [64, 2], [64, 2]]
-        target_conf = [[32, 3], [64,3]]
+        target_conf = [[64,3]]
        # target_conf = [[16, 2], [32, 2], [32, 2]]
 
 

@@ -384,6 +384,8 @@ class RandomRotation(Wrapper):
         self.steps = 0
         self.vec = np.random.choice([1, -1])
         self.total_rots = np.random.choice(list(range(0,72,5)))
+        task = make_3d_cube(rand=True)
+        self.env.task = task
         return super().reset()
 
     def step(self, action):
