@@ -38,7 +38,7 @@ def make_iglu(*args, **kwargs):
     env = GridWorld(custom_grid, render=False)
 
     env = SelectAndPlace(env)
-
+    env = RandomTarget(env)
     env = VectorObservationWrapper(env)
 
     env = TimeLimit(env, limit=750)
@@ -46,7 +46,7 @@ def make_iglu(*args, **kwargs):
 
     env = Discretization(env, flat_action_space('human-level'))
     #env = RandomRotation(env)
-    env = RandomTarget(env)
+
 
     num_workers, envs_per_worker = 1, 1
     env.reward_range = (-float('inf'), float('inf'))
