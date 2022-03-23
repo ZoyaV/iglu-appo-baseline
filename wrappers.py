@@ -78,7 +78,7 @@ class ObsWrapper(Wrapper):
         obs, reward, done, info = super().step(action)
         info['grid'] = obs['grid']
         info['agentPos'] = obs['agentPos']
-      #  info['obs'] = obs['obs']
+       # info['obs'] = obs['obs']
         return self.observation(obs, reward, done, info), reward, done, info
 
 
@@ -172,10 +172,8 @@ class RangetReward (Wrapper):
         self.rspec = rspec
 
     def calc_reward(self, dist):
-        IN = np.array(range(0, self.rspec))
-        IN_ = IN * 2 + 0.4
-        reward_range = np.arctan(-(IN_)) + np.arctan(IN_[8])
-        return reward_range[int(dist)]
+        IN = [1, 0.25, 0.05, 0.001, -0.0001, -0.001, -0.01, -0.02, -0.03, -0.04, -0.05, -0.06, -0.07, -0.08, -0.09]
+        return IN[int(dist)]
 
     def blocks_count(self, info):
         return np.sum(info['grid'] != 0)
